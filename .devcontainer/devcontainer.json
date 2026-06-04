@@ -1,7 +1,7 @@
 {
   "name": "DS5Dongle-ESP (ESP-IDF / ESP32-S31)",
-  "//image-note": "Pin to an ESP-IDF tag that supports ESP32-S31 once known, e.g. espressif/idf:v6.0 — 'latest' tracks the newest release.",
-  "image": "espressif/idf:latest",
+  "//image-note": "esp32s31 is only in ESP-IDF master (a preview target), so the stock espressif/idf tags do NOT support it. Build a master-based image first: docker build -t espidf:s31 --build-arg IDF_CLONE_BRANCH_OR_TAG=master --build-arg IDF_INSTALL_TARGETS=esp32s31 --build-arg IDF_CLONE_SHALLOW=1 'https://github.com/espressif/esp-idf.git#master:tools/docker'",
+  "image": "espidf:s31",
   "runArgs": ["--privileged"],
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/ds5dongle,type=bind",
   "workspaceFolder": "/workspaces/ds5dongle",

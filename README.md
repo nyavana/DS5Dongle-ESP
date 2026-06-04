@@ -34,27 +34,39 @@ DS5Dongle-ESP/            (bare-repo worktree root — see ../LAYOUT.md)
 Requires ESP-IDF with ESP32-S31 support (see "Toolchain" below).
 
 ```bash
-idf.py set-target esp32s31      # confirm the exact name via `idf.py --list-targets`
+# esp32s31 is a PREVIEW target in IDF master, so the --preview flag is required:
+idf.py --preview set-target esp32s31
 idf.py build
 idf.py -p <PORT> flash monitor
 ```
 
-Or open the folder in VS Code with the Dev Containers extension to use the
-pinned [`espressif/idf`](.devcontainer/devcontainer.json) image — no local
-toolchain install needed.
+Or open the folder in VS Code with the Dev Containers extension — it uses the
+local `espidf:s31` image (built below).
 
 ### Toolchain
 
 ESP32-S31 is new — as of 2026-06 the `esp32s31` target exists **only in ESP-IDF
-`master`** (no tagged release or `espressif/idf` Docker tag has it yet). So you
-need a master-based IDF. Two options:
+`master`** (a *preview* target; no tagged release or stock `espressif/idf` Docker
+tag has it yet). So you need a master-based IDF. Two options:
 
-- **Docker / devcontainer** — `espressif/idf` image; reproducible, nothing to
-  install on the host besides Docker.
-- **Native install** — clone ESP-IDF and run its installer, then `. export.sh`.
+- **Docker (recommended)** — build a master-based image with only the S31
+  toolchain (this is what the devcontainer uses):
+  ```bash
+  docker build -t espidf:s31 \
+    --build-arg IDF_CLONE_BRANCH_OR_TAG=master \
+    --build-arg IDF_INSTALL_TARGETS=esp32s31 \
+    --build-arg IDF_CLONE_SHALLOW=1 \
+    "https://github.com/espressif/esp-idf.git#master:tools/docker"
+  # then, from this dir:
+  docker run --rm -v "$PWD":/project -w /project espidf:s31 \
+    bash -lc 'idf.py --preview set-target esp32s31 && idf.py build'
+  ```
+- **Native install** — clone ESP-IDF `master` and run `./install.sh esp32s31`,
+  then `. ./export.sh` (needs a supported Python, ~3.9–3.13).
 
-See [`docs/MIGRATION.md`](docs/MIGRATION.md) for caveats (target string, Kconfig
-symbols, Opus component) that depend on the IDF version you land on.
+Verified 2026-06-03 on `espidf:s31` (IDF v6.2.0 / master): this scaffold builds
+clean for `esp32s31` (incl. `esp_tinyusb`). See [`docs/MIGRATION.md`](docs/MIGRATION.md)
+for remaining caveats (Kconfig symbols, Opus component, flashing on WSL2).
 
 ## Original project
 

@@ -50,17 +50,34 @@ So the S31 is the first single-chip ESP target that fits this project.
 
 ## Toolchain status (verified 2026-06-03)
 
-ESP32-S31 support is **only in ESP-IDF `master`** so far:
+ESP32-S31 support is **only in ESP-IDF `master`**, as a **preview target**:
 
-- `master` has the SoC target (`components/soc/esp32s31/...`). ✅
+- `master` has the SoC target (`components/soc/esp32s31/...`) and a dedicated
+  BT controller lib (`components/bt/controller/lib_esp32s31`). ✅
+- It is in `PREVIEW_TARGETS` (`['linux', 'esp32h21', 'esp32h4', 'esp32s31']`),
+  so it is **not** in `idf.py --list-targets` and requires the `--preview`
+  flag: `idf.py --preview set-target esp32s31`.
 - **No tagged release** includes it yet (latest are v6.0.1 / v5.5.4), and the
-  `espressif/idf:latest` Docker image (v6.1-dev) lists every target *except*
-  `esp32s31`.
+  stock `espressif/idf:latest` image (v6.1-dev) does not list it.
 
-So building for the S31 means tracking ESP-IDF `master` — expect APIs/Kconfig
-to shift, and treat BT-Classic/USB-on-S31 support as not-yet-stable. Re-check
-`idf.py --list-targets` after any IDF update; switch to the first tagged release
-that lists `esp32s31` once one ships.
+**Toolchain used here:** a master-based Docker image `espidf:s31` (IDF v6.2.0),
+built with:
+
+```bash
+docker build -t espidf:s31 \
+  --build-arg IDF_CLONE_BRANCH_OR_TAG=master \
+  --build-arg IDF_INSTALL_TARGETS=esp32s31 \
+  --build-arg IDF_CLONE_SHALLOW=1 \
+  "https://github.com/espressif/esp-idf.git#master:tools/docker"
+```
+
+**Verified build (2026-06-03):** stock `hello_world` and this scaffold both
+build clean for `esp32s31` on `espidf:s31`; `esp_tinyusb` compiles for the
+target; output `ds5dongle_esp32s31.bin` (~179 KB).
+
+Because this tracks `master`, expect APIs/Kconfig to shift and treat
+BT-Classic/USB-on-S31 as not-yet-stable. Re-check after any IDF update, and
+switch to the first tagged release that lists `esp32s31` once one ships.
 
 ## Open items / caveats
 

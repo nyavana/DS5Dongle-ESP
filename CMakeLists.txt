@@ -1,11 +1,11 @@
 # DS5Dongle-ESP — ESP32-S31 firmware (migrated from Raspberry Pi Pico 2W)
 #
-# Build:
-#   idf.py set-target esp32s31     # confirm exact target via `idf.py --list-targets`
+# Build (esp32s31 is a PREVIEW target in ESP-IDF master — note --preview):
+#   idf.py --preview set-target esp32s31
 #   idf.py build flash monitor
 #
-# ESP32-S31 is new — its target string and some Kconfig symbols may differ
-# between ESP-IDF releases. See docs/MIGRATION.md.
+# ESP32-S31 support currently lives only in ESP-IDF master; target string and
+# some Kconfig symbols may still shift. See docs/MIGRATION.md.
 cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

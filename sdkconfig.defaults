@@ -23,6 +23,11 @@ CONFIG_BT_HID_HOST_ENABLED=y
 # --- PSRAM (S31 supports high-speed DDR PSRAM; enable if your module has it) ---
 # CONFIG_SPIRAM=y
 
+# --- Flash size: the 3 MB app partition below needs >=4 MB (S31 modules ship
+#     4/8/16 MB). Bump to match your module. ---
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
+
 # --- Custom partition table (room for BT + USB + Opus firmware) ---
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
