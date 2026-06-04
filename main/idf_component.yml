@@ -1,0 +1,12 @@
+## Managed component dependencies (ESP Component Registry).
+## Resolved into managed_components/ on `idf.py reconfigure` / first build.
+dependencies:
+  idf: ">=5.3"
+
+  # USB-OTG device stack — wraps TinyUSB, supplies the USB descriptors plumbing
+  # the dongle uses to present itself to the host as the DualSense.
+  espressif/esp_tinyusb: "^1.4.0"
+
+  # Opus codec for DualSense audio (replaces the Pico build's lib/opus submodule).
+  # Confirm the package id/version against components.espressif.com before enabling.
+  # espressif/opus: "*"

@@ -1,0 +1,21 @@
+{
+  "name": "DS5Dongle-ESP (ESP-IDF / ESP32-S31)",
+  "//image-note": "Pin to an ESP-IDF tag that supports ESP32-S31 once known, e.g. espressif/idf:v6.0 — 'latest' tracks the newest release.",
+  "image": "espressif/idf:latest",
+  "runArgs": ["--privileged"],
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/ds5dongle,type=bind",
+  "workspaceFolder": "/workspaces/ds5dongle",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "espressif.esp-idf-extension",
+        "ms-vscode.cpptools"
+      ],
+      "settings": {
+        "idf.gitPath": "/usr/bin/git",
+        "idf.toolsPath": "/opt/esp"
+      }
+    }
+  },
+  "postCreateCommand": "idf.py --version && idf.py --list-targets"
+}

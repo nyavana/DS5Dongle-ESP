@@ -1,4 +1,21 @@
-build
-.vscode
-.idea
-example
+# --- ESP-IDF build artifacts ---
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+dependencies.lock
+*.bin
+*.elf
+*.map
+
+# --- Editors / IDE ---
+.vscode/
+.idea/
+*.swp
+compile_commands.json
+
+# --- OS ---
+.DS_Store
+
+# Note: sdkconfig.defaults IS tracked (reproducible config). Generated
+# sdkconfig is not.
