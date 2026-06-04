@@ -31,7 +31,12 @@ CONFIG_BT_HID_HOST_ENABLED=y
 #     S31 USB-OTG enumerates Full-Speed (CONFIG_TINYUSB_RHPORT_FS) — same speed
 #     the Pico build used (TUSB_SPEED_FULL). Custom DualSense descriptors are
 #     supplied in code by components/usb (group 2), not the esp_tinyusb
-#     built-in VID/PID descriptor. ---
+#     built-in VID/PID descriptor.
+#     CFG_TUD_HID = CONFIG_TINYUSB_HID_COUNT (default 0 = HID off); set to 1 to
+#     enable the HID device class. NOTE: esp_tinyusb exposes no UAC/audio
+#     Kconfig (CFG_TUD_AUDIO is absent) — the USB-audio path is resolved in
+#     group 6 by injecting the TinyUSB audio config directly. ---
+CONFIG_TINYUSB_HID_COUNT=1
 
 # --- Task watchdog: IDF-managed TWDT replaces the Pico hardware/watchdog.
 #     Long-running tasks (the report bridge) subscribe via esp_task_wdt_add. ---

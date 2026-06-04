@@ -20,9 +20,9 @@
 #include "freertos/task.h"
 
 #include "report_buffer.h"
+#include "usb.h"               // group 2 — esp_tinyusb DualSense device
 // Subsystem headers are included as each component is ported:
 //   #include "config.h"       // group 5 — NVS-backed Config
-//   #include "usb.h"          // group 2 — esp_tinyusb DualSense device
 //   #include "bt.h"           // group 3 — Bluedroid BR/EDR HID host
 //   #include "bridge.h"       // group 4 — BT <-> USB HID report relay
 //   #include "audio.h"        // group 6 — Opus + resampler over BT
@@ -57,7 +57,7 @@ extern "C" void app_main(void) {
     // the IDF task watchdog (CONFIG_ESP_TASK_WDT_*, sdkconfig.defaults); the
     // report-bridge task subscribes to it via esp_task_wdt_add in group 4.
     //   config_load();                                     // group 5
-    //   usb_init();                                        // group 2
+    usb_init();                                          // group 2
     //   bt_init(); bt_register_data_callback(on_bt_data);  // group 3
     //   bridge_init();                                     // group 4
     //   audio_init();                                      // group 6

@@ -9,5 +9,6 @@ idf_component_register(
     REQUIRES
         report_buffer   # shared portMUX-guarded input-report buffer (group 1)
         nvs_flash       # config + BT bond persistence (group 5 / Bluedroid)
-        # usb bt bridge config audio battery_led   # added as each is ported
+        usb             # esp_tinyusb DualSense device (group 2)
+        # bt bridge config audio battery_led   # added as each is ported
 )
