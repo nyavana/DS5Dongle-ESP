@@ -11,5 +11,7 @@ idf_component_register(
         nvs_flash       # config + BT bond persistence (group 5 / Bluedroid)
         usb             # esp_tinyusb DualSense device (group 2)
         bthost          # Bluedroid BR/EDR HID host (group 3; bt.h)
-        # bridge config audio battery_led   # added as each is ported
+        config          # NVS-backed Config (group 5 core; config.h)
+        bridge          # BT <-> USB HID report relay (group 4; bridge.h)
+        # audio battery_led   # added as each is ported
 )

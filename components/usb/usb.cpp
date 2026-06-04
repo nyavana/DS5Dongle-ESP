@@ -47,34 +47,6 @@ void usb_init() {
              usb_device_descriptor()->idVendor, usb_device_descriptor()->idProduct);
 }
 
-//--------------------------------------------------------------------+
-// HID class callbacks (stub routing — filled by groups 4-5)
-//--------------------------------------------------------------------+
-
-// GET_REPORT (feature): 0xf6-0xf9 -> device-config command interface; other
-// feature IDs -> stored feature data. Returns length, or 0 to STALL.
-uint16_t tud_hid_get_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type,
-                               uint8_t *buffer, uint16_t reqlen) {
-    (void) itf;
-    (void) report_type;
-    (void) buffer;
-    (void) reqlen;
-    (void) report_id;
-    // TODO(group 4/5): if (is_pico_cmd(report_id)) return pico_cmd_get(...);
-    //                  else return stored get_feature_data(report_id, reqlen).
-    return 0;  // STALL until the cmd / feature-data paths are ported
-}
-
-// SET_REPORT / interrupt-OUT: 0xf6-0xf9 -> command interface; report_id 0 with
-// leading byte 0x02 -> output state + BT output report; feature IDs
-// 0x80/0x60/0x61/0x62 -> feature store.
-void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type,
-                           uint8_t const *buffer, uint16_t bufsize) {
-    (void) itf;
-    (void) report_type;
-    (void) buffer;
-    (void) bufsize;
-    (void) report_id;
-    // TODO(group 4/5): is_pico_cmd -> pico_cmd_set; report_id 0 / buffer[0]==0x02
-    //                  -> state_update + bt_write; feature IDs -> set_feature_data.
-}
+// NOTE: the HID class callbacks (tud_hid_get_report_cb / tud_hid_set_report_cb)
+// live in the bridge component (group 4), which owns the command / output /
+// feature routing. TinyUSB links them by name regardless of component.

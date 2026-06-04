@@ -20,10 +20,11 @@
 #include "freertos/task.h"
 
 #include "report_buffer.h"
+#include "config.h"            // group 5 — NVS-backed Config
 #include "usb.h"               // group 2 — esp_tinyusb DualSense device
 #include "bt.h"                // group 3 — Bluedroid BR/EDR HID host
+#include "bridge.h"            // group 4 — BT <-> USB HID report relay
 // Subsystem headers are included as each component is ported:
-//   #include "config.h"       // group 5 — NVS-backed Config
 //   #include "bridge.h"       // group 4 — BT <-> USB HID report relay
 //   #include "audio.h"        // group 6 — Opus + resampler over BT
 //   #include "battery_led.h"  // group 7 — low-battery indicator
@@ -56,11 +57,10 @@ extern "C" void app_main(void) {
     // group; until then the firmware boots, logs, and idles. Hang protection is
     // the IDF task watchdog (CONFIG_ESP_TASK_WDT_*, sdkconfig.defaults); the
     // report-bridge task subscribes to it via esp_task_wdt_add in group 4.
-    //   config_load();                                     // group 5
+    config_load();                                      // group 5 (NVS)
     usb_init();                                          // group 2
     bt_init();                                           // group 3
-    //   bt_register_data_callback(on_bt_data);             // group 4 (bridge owns the callback)
-    //   bridge_init();                                     // group 4
+    bridge_init();                                       // group 4 (registers on_bt_data + send task)
     //   audio_init();                                      // group 6
     //   battery_led_init();                                // group 7
 

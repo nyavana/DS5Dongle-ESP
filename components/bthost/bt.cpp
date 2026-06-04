@@ -132,7 +132,12 @@ static void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id,
         case ESP_HIDH_FEATURE_EVENT: {
             uint8_t rid = (uint8_t) param->feature.report_id;
             feature_lock();
-            s_feature[rid].assign(param->feature.data, param->feature.data + param->feature.length);
+            // Cache as [report_id, ...payload] to match the Pico feature_data
+            // layout (the bridge GET path returns data()+1 / size()-1).
+            auto &vec = s_feature[rid];
+            vec.clear();
+            vec.push_back(rid);
+            vec.insert(vec.end(), param->feature.data, param->feature.data + param->feature.length);
             feature_unlock();
             // DSE detection: the Pico requests feature 0x70 — DSE returns data,
             // DS5 returns a single byte.
