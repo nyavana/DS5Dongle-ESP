@@ -81,8 +81,9 @@ switch to the first tagged release that lists `esp32s31` once one ships.
 
 ## Open items / caveats
 
-- **Target string**: scaffold assumes `idf.py set-target esp32s31` (present on
-  IDF master). Confirm with `idf.py --list-targets`.
+- **Target string**: `esp32s31` is a *preview* target on IDF master, so it is
+  **not** shown by `idf.py --list-targets`; select it with
+  `idf.py --preview set-target esp32s31`.
 - **Kconfig symbols** in `sdkconfig.defaults` (`CONFIG_BT_CLASSIC_ENABLED`,
   CPU-freq symbol, etc.) are starting points — verify in `menuconfig`.
 - **Opus registry package** id/version is a TODO in `main/idf_component.yml`.
