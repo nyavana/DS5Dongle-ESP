@@ -1,5 +1,5 @@
-# App entry component. As modules are ported out of legacy-pico/src they should
-# land in ../components/<name>/ (one component per subsystem) and be added to
+# App entry component. As modules are ported out of legacy-pico/src they land
+# in ../components/<name>/ (one component per subsystem) and are added to
 # REQUIRES below — keep `main` thin.
 idf_component_register(
     SRCS
@@ -7,5 +7,7 @@ idf_component_register(
     INCLUDE_DIRS
         "."
     REQUIRES
-        # bt usb audio config state_mgr   # add component names as they are ported
+        report_buffer   # shared portMUX-guarded input-report buffer (group 1)
+        nvs_flash       # config + BT bond persistence (group 5 / Bluedroid)
+        # usb bt bridge config audio battery_led   # added as each is ported
 )

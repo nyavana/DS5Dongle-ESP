@@ -1,24 +1,42 @@
-# === DS5Dongle-ESP / ESP32-S31 — starting sdkconfig defaults ===
+# === DS5Dongle-ESP / ESP32-S31 — sdkconfig defaults ===
 #
-# ESP32-S31 is a new SoC. Treat every symbol here as a STARTING POINT and
-# confirm it against `idf.py menuconfig` for your installed ESP-IDF — some
-# symbols carry a chip-specific suffix and a few may not exist yet.
+# Reconciled against the actual esp32s31 Kconfig exposed by the espidf:s31
+# image (ESP-IDF master / v6.2.0), 2026-06. `sdkconfig` itself is generated and
+# git-ignored; edit defaults here so the config is reproducible across
+# worktrees / CI / the devcontainer. Confirm in `idf.py menuconfig` if symbols
+# shift on a newer master.
 #
-# `sdkconfig` itself is generated and git-ignored; edit defaults here so the
-# config is reproducible across worktrees / CI / the devcontainer.
+# Symbols reconciled in this port (group 1 / task 1.1):
+#   - CPU freq symbol is CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_320 (S31 runs 320 MHz
+#     natively — it is already the resolved default; set explicitly for intent).
+#   - BT HID host needs the PARENT menuconfig CONFIG_BT_HID_ENABLED=y as well as
+#     CONFIG_BT_HID_HOST_ENABLED=y. The original scaffold set only the child, so
+#     the HID host stayed OFF (resolved sdkconfig showed BT_HID_ENABLED unset).
+#   - Task WDT (CONFIG_ESP_TASK_WDT_EN/INIT) is on by default — kept as the
+#     hang-protection replacement for the Pico hardware/watchdog.
 
-# --- CPU: run at full clock (the Pico build needed a 1.2V/320MHz overclock for
-#     the Opus encoder; the S31 runs 320 MHz natively, no overclock hack). ---
-# CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_320=y        # confirm symbol name for S31
+# --- CPU: S31 runs 320 MHz natively (no 1.2V/320MHz overclock hack like the
+#     Pico build needed for the Opus encoder). ---
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_320=y
 
-# --- Bluetooth: Classic BR/EDR is the DualSense link (the whole reason S31 over S3) ---
+# --- Bluetooth: Classic BR/EDR is the DualSense link (the whole reason S31
+#     over S3). Bluedroid HID host = esp_hidh BR/EDR path (design D1). ---
 CONFIG_BT_ENABLED=y
 CONFIG_BT_BLUEDROID_ENABLED=y
 CONFIG_BT_CLASSIC_ENABLED=y
+CONFIG_BT_HID_ENABLED=y
 CONFIG_BT_HID_HOST_ENABLED=y
 
-# --- USB-OTG device (presents to the host as the DualSense, via esp_tinyusb) ---
-# esp_tinyusb is pulled in by main/idf_component.yml; descriptors are app-defined.
+# --- USB-OTG device (presents to the host as the DualSense, via esp_tinyusb).
+#     S31 USB-OTG enumerates Full-Speed (CONFIG_TINYUSB_RHPORT_FS) — same speed
+#     the Pico build used (TUSB_SPEED_FULL). Custom DualSense descriptors are
+#     supplied in code by components/usb (group 2), not the esp_tinyusb
+#     built-in VID/PID descriptor. ---
+
+# --- Task watchdog: IDF-managed TWDT replaces the Pico hardware/watchdog.
+#     Long-running tasks (the report bridge) subscribe via esp_task_wdt_add. ---
+CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_ESP_TASK_WDT_INIT=y
 
 # --- PSRAM (S31 supports high-speed DDR PSRAM; enable if your module has it) ---
 # CONFIG_SPIRAM=y
