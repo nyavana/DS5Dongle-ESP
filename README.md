@@ -45,7 +45,9 @@ toolchain install needed.
 
 ### Toolchain
 
-ESP32-S31 is new, so it requires a recent ESP-IDF. Two options:
+ESP32-S31 is new — as of 2026-06 the `esp32s31` target exists **only in ESP-IDF
+`master`** (no tagged release or `espressif/idf` Docker tag has it yet). So you
+need a master-based IDF. Two options:
 
 - **Docker / devcontainer** — `espressif/idf` image; reproducible, nothing to
   install on the host besides Docker.

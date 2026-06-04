@@ -48,10 +48,24 @@ So the S31 is the first single-chip ESP target that fits this project.
 | `board_init`, `tud_*` | `esp_tinyusb` init + TinyUSB device callbacks |
 | super-loop polling | BT/USB event callbacks + dedicated FreeRTOS tasks |
 
+## Toolchain status (verified 2026-06-03)
+
+ESP32-S31 support is **only in ESP-IDF `master`** so far:
+
+- `master` has the SoC target (`components/soc/esp32s31/...`). ✅
+- **No tagged release** includes it yet (latest are v6.0.1 / v5.5.4), and the
+  `espressif/idf:latest` Docker image (v6.1-dev) lists every target *except*
+  `esp32s31`.
+
+So building for the S31 means tracking ESP-IDF `master` — expect APIs/Kconfig
+to shift, and treat BT-Classic/USB-on-S31 support as not-yet-stable. Re-check
+`idf.py --list-targets` after any IDF update; switch to the first tagged release
+that lists `esp32s31` once one ships.
+
 ## Open items / caveats
 
-- **Target string**: scaffold assumes `idf.py set-target esp32s31`. Confirm with
-  `idf.py --list-targets`; ESP32-S31 support needs a recent ESP-IDF.
+- **Target string**: scaffold assumes `idf.py set-target esp32s31` (present on
+  IDF master). Confirm with `idf.py --list-targets`.
 - **Kconfig symbols** in `sdkconfig.defaults` (`CONFIG_BT_CLASSIC_ENABLED`,
   CPU-freq symbol, etc.) are starting points — verify in `menuconfig`.
 - **Opus registry package** id/version is a TODO in `main/idf_component.yml`.
