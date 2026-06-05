@@ -1,0 +1,26 @@
+schema: spec-driven
+
+context: |
+  Project: ESP-IDF port of the Pico 2W DualSense dongle firmware to ESP32-S31.
+  The firmware must be both a Bluetooth Classic BR/EDR HID host for the
+  DualSense controller and a USB HID device to the host.
+  Source of truth for behavior is the Pico implementation in ../master and the
+  mirrored legacy-pico/ tree. The migration plan lives in docs/MIGRATION.md.
+  Target: esp32s31 is an ESP-IDF master preview target; idf.py commands that
+  select the target require --preview.
+  Build gate: docker run --rm -v "$PWD":/p -w /p espidf:s31 idf.py --preview set-target esp32s31 build.
+  Codex shell commands in this checkout should be prefixed with rtk.
+  No physical ESP32-S31 hardware is available in this environment, so runtime
+  BT pairing, USB enumeration, audio, and LED behavior must be reported as
+  needing hardware verification unless the user states otherwise.
+
+rules:
+  proposal:
+    - Keep ESP32-S31 preview-target and no-hardware constraints explicit.
+    - Preserve the existing USB/report/config protocol unless a change explicitly says otherwise.
+  design:
+    - Keep each ported subsystem behind an ESP-IDF component boundary.
+    - Prefer existing Pico module headers as stable cross-module contracts.
+  tasks:
+    - End implementation groups with the espidf:s31 build gate.
+    - Do not mark runtime behavior verified without physical hardware evidence.
