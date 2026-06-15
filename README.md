@@ -1,11 +1,12 @@
 # DS5Dongle-ESP — ESP32-S31
 
 > Turn an **ESP32-S31** into a wireless DualSense (DS5) dongle.
-> Migration of the [Pico 2W DualSense bridge](#original-project) to ESP-IDF.
+> ESP-IDF firmware for the ESP32-S31 target; the Pico 2W implementation is
+> preserved only as the reference source.
 
-**Status:** build-verified ESP32-S31 migration scaffold. Boot, USB HID, BR/EDR
+**Status:** build-verified ESP32-S31 firmware scaffold. Boot, USB HID, BR/EDR
 HID host, report bridge, NVS config/commands, state management, audio scaffold,
-battery LED scaffold, and CI wiring are ported and build clean. Runtime hardware
+battery LED scaffold, and CI wiring build clean for `esp32s31`. Runtime hardware
 bring-up remains pending. See [`docs/MIGRATION.md`](docs/MIGRATION.md) and
 [`docs/COMPLETION.md`](docs/COMPLETION.md).
 
@@ -21,7 +22,7 @@ The S3 is BLE-only; the original ESP32 lacks native USB — see the migration do
 ```
 DS5Dongle-ESP/            (bare-repo worktree root — see ../LAYOUT.md)
   master/                 Pico 2W reference (upstream, pristine)
-  esp32-s31/  <-- here    ESP-IDF migration project
+  esp32-s31/  <-- here    ESP-IDF ESP32-S31 firmware project
     CMakeLists.txt        ESP-IDF top-level
     sdkconfig.defaults    reproducible config defaults
     partitions.csv
@@ -68,7 +69,7 @@ tag has it yet). So you need a master-based IDF. Two options:
   then `. ./export.sh` (needs a supported Python, ~3.9–3.13).
 
 Verified 2026-06-15 on `espidf:s31` (IDF v6.2.0 / master): the current
-migration scaffold builds clean for `esp32s31` and produces
+ESP32-S31 firmware scaffold builds clean for `esp32s31` and produces
 `ds5dongle_esp32s31.bin`. Runtime pairing, USB enumeration against a real host,
 audio, and LED behavior still require physical ESP32-S31 hardware.
 
@@ -79,11 +80,12 @@ GitHub Actions builds firmware inside
 running the `Build ESP-IDF S31 container` workflow. The firmware workflow cannot
 pull the container until that image exists in GHCR.
 
-## Original project
+## Pico Reference
 
-This is a port. The Pico 2W original — including its full README, web config,
-release `.uf2`s and credits — lives on the `master` branch / `../master`
-worktree, and the sources are mirrored under [`legacy-pico/`](legacy-pico/).
+This worktree is for the ESP32-S31 firmware. The Pico 2W original — including
+its full README, web config, release `.uf2`s and credits — lives on the `master`
+branch / `../master` worktree, and the sources are mirrored under
+[`legacy-pico/`](legacy-pico/) for comparison only.
 Upstream: <https://github.com/nyavana/DS5Dongle-ESP>.
 
 Credits carried from the original:
