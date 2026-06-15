@@ -52,22 +52,23 @@ The active OpenSpec change is `port-firmware-esp32s31`:
 - Planning artifacts are under `openspec/changes/port-firmware-esp32s31/`.
 - `openspec status --change port-firmware-esp32s31 --json` should report
   `isComplete: true` for proposal, design, specs, and tasks.
+- `openspec instructions apply --change port-firmware-esp32s31 --json` should
+  report `state: all_done`.
 - `decision.md` records the resolved Group 6 audio decision: build an audio
   scaffold now, defer live UAC/Opus runtime work to hardware bring-up.
+- `docs/COMPLETION.md` records the build-verified migration scaffold and the
+  remaining hardware-only validation items.
 
 Implementation state from `openspec/changes/port-firmware-esp32s31/tasks.md`:
 
-- Groups 0-4 are marked complete.
-- Group 5 is complete except `disable_pico_led`, which is deferred to the battery
-  indicator work.
-- Group 6 audio is no longer blocked on a scope decision. Implement the
-  default-disabled audio scaffold from the current OpenSpec tasks; do not vendor
-  `xiph/opus` or WDL, do not inject TinyUSB UAC, and do not change the HID-only
-  USB descriptor in this pass.
-- Group 7 should use the OpenSpec default: a plain GPIO battery LED path with the
-  GPIO disabled until real board hardware identifies the pin. Do not ask for a
-  board LED decision during implementation.
-- Groups 7-8 remain pending.
+- Groups 0-8 are marked complete.
+- Group 6 audio is implemented as a default-disabled scaffold in
+  `components/audio/`; do not vendor `xiph/opus` or WDL, do not inject TinyUSB
+  UAC, and do not change the HID-only USB descriptor before hardware bring-up.
+- Group 7 battery LED support is implemented in `components/battery_led/` as a
+  plain GPIO path with `DS5_BATTERY_LED_GPIO=-1` disabled by default.
+- Group 8 CI/docs/report work is complete; the firmware workflow uses the GHCR
+  S31 image and emits firmware artifacts.
 
 Do not claim runtime BT/USB/audio success until the paths are tested on physical
 ESP32-S31 hardware.
@@ -87,5 +88,5 @@ rtk diff -qr .claude/skills .codex/skills
 ```
 
 When future development resumes, follow `docs/MIGRATION.md` and the OpenSpec task
-order. Keep `main/` thin and put each ported subsystem behind its ESP-IDF component
-under `components/<name>/`.
+hardware bring-up list. Keep `main/` thin and put each ported subsystem behind
+its ESP-IDF component under `components/<name>/`.

@@ -6,11 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 An **ESP-IDF port to the ESP32-S31** of the Pico 2W DualSense bridge firmware.
 
-**Status: WIP controller-path port** — boot, USB HID, BR/EDR HID host, HID report
-bridge, NVS config, command handling, state management, and the shared report
-buffer are ported and build clean. Audio, battery LED, CI migration, and real
-hardware bring-up remain pending. The working/shipping firmware is still the Pico
-2W build on the upstream `master` branch.
+**Status: build-verified ESP32-S31 migration scaffold** — boot, USB HID, BR/EDR
+HID host, HID report bridge, NVS config, command handling, state management, the
+shared report buffer, the default-disabled audio scaffold, battery LED support,
+CI, and completion docs are ported and build clean. Real hardware bring-up remains
+pending. The working/shipping firmware is still the Pico 2W build on the upstream
+`master` branch until S31 hardware validation is complete.
 
 The firmware (once ported) is a wireless **DualSense (PS5 / "DS5") adapter**:
 simultaneously a **Bluetooth Classic (BR/EDR) HID _host_** to the controller and a
@@ -75,18 +76,22 @@ Module mapping (Pico → ESP-IDF):
 | `battery_led.cpp` | plain GPIO path with disabled default pin; `led_strip` only after hardware requires it |
 | `main.cpp` | `app_main` + FreeRTOS tasks |
 
-Suggested porting order from here: Group 6 audio scaffold -> Group 7 battery LED ->
-Group 8 CI/docs/report -> hardware bring-up.
+All OpenSpec implementation groups for `port-firmware-esp32s31` are complete.
+Suggested next order: archive the completed OpenSpec change when ready, publish or
+run the GHCR S31 toolchain image workflow as needed, then start physical S31
+hardware bring-up.
 
-## Open migration TODOs
+## Remaining hardware TODOs
 
 - CI now uses the GHCR image `ghcr.io/nyavana/ds5dongle-esp32s31-idf:master` and
   emits ESP32-S31 `.bin` artifacts. Run the `Build ESP-IDF S31 container` workflow
   once before relying on normal firmware CI, because the image must exist in GHCR.
-- Build the Group 6 audio scaffold without enabling UAC or live Opus runtime.
-- Port `battery_led` and route `disable_pico_led` to the chosen board LED.
-- Validate HID-only USB enumeration, BR/EDR pairing/report traffic, and later
-  HID+UAC audio once physical S31 hardware is available.
+- Validate HID-only USB enumeration on physical ESP32-S31 hardware.
+- Validate BR/EDR pairing and HID report traffic with a DualSense controller.
+- Identify the real board LED GPIO and set `DS5_BATTERY_LED_GPIO` if hardware has
+  a suitable indicator.
+- Decide whether to enable HID+UAC descriptors and live Opus audio after hardware
+  USB and Bluetooth paths are stable.
 
 Because this tracks ESP-IDF `master`, expect APIs/Kconfig to shift; re-check after any
 IDF update and switch to the first tagged release that lists `esp32s31` once one ships.
