@@ -21,7 +21,7 @@ The firmware SHALL boot from `app_main()` and SHALL replace the Pico single supe
 #### Scenario: Boot brings up subsystems in dependency order
 
 - **WHEN** `app_main()` runs
-- **THEN** it initializes configuration (NVS), then Bluetooth host, then USB device, then the report-bridge and audio subsystems, registering their event callbacks rather than polling them in a busy loop
+- **THEN** it initializes configuration (NVS), then Bluetooth host, then USB device, then the report-bridge and default-disabled audio scaffold, registering callbacks/tasks rather than polling them in a busy loop
 
 #### Scenario: No Pico SDK super-loop remains
 

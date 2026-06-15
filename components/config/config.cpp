@@ -1,11 +1,10 @@
 //
 // Device configuration (ported from legacy-pico/src/config.cpp).
 //
-// The Pico build stored Config in the last flash sector (hardware/flash +
-// hardware/sync). Here it persists as a single NVS blob (namespace "ds5", key
-// "config"), keeping the same magic/version/size/CRC validation as a
-// belt-and-braces check over NVS's own integrity. The disable_pico_led ->
-// onboard-LED routing moves to the battery indicator (group 7 / task 5.4).
+// The reference build stored Config in a raw flash sector. Here it persists as
+// a single NVS blob (namespace "ds5", key "config"), keeping the same
+// magic/version/size/CRC validation as a belt-and-braces check over NVS's own
+// integrity. The disable_pico_led field is routed to the battery indicator.
 //
 
 #include "config.h"
@@ -28,6 +27,11 @@ constexpr uint16_t CONFIG_VERSION = 1;
 
 static Config config{};
 bool is_dse = false;
+
+// Filled by components/battery_led in group 7. Kept weak to avoid a config ->
+// battery_led component dependency while still applying disable_pico_led changes
+// immediately when the indicator is linked.
+__attribute__((weak)) void battery_led_apply_config(void) {}
 
 static uint32_t calc_config_crc(const Config &con) {
     return crc32(reinterpret_cast<const uint8_t *>(&con.body), sizeof(Config_body));
@@ -153,11 +157,11 @@ void set_config(const uint8_t *new_config, const uint16_t len) {
     const auto copy_len = len < sizeof(Config_body) ? len : sizeof(Config_body);
     memcpy(&config.body, new_config, copy_len);
     config_valid();
-    // TODO(group 7 / task 5.4): route disable_pico_led to the battery indicator
-    // (Pico called cyw43_arch_gpio_put here).
+    battery_led_apply_config();
 }
 
 void set_config(const Config_body &new_config) {
     config.body = new_config;
     config_valid();
+    battery_led_apply_config();
 }

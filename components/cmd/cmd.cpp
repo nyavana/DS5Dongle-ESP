@@ -1,10 +1,9 @@
 //
 // Custom feature-report command interface (ported from legacy-pico/src/cmd.cpp).
 //
-// Implements the 0xf6-0xf9 command protocol over HID feature reports. Pico
-// substitutions: device/usbd.h tud_* stay (TinyUSB, via esp_tinyusb), pico/time
-// sleep_ms -> vTaskDelay, and PICO_PROGRAM_VERSION_STRING -> a build-defined
-// firmware version string.
+// Implements the 0xf6-0xf9 command protocol over HID feature reports. TinyUSB
+// APIs stay available through esp_tinyusb, sleep_ms becomes vTaskDelay, and the
+// firmware version string is build-defined.
 //
 
 #include "cmd.h"

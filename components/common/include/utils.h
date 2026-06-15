@@ -1,11 +1,11 @@
 //
 // Shared DualSense protocol helpers (ported from legacy-pico/src/utils.h).
 //
-// The Pico utils.h also pulled in BTstack's hci_cmd.h (for opcode_to_str) and
-// <iostream> (for print_hex). Those are dropped here: opcode_to_str was BTstack
-// debug only, and print_hex is reimplemented over printf. What remains is the
-// portable core shared by bt / state_mgr / cmd / audio: the DualSense CRC
-// helpers and the SetStateData output-report layout.
+// The reference utils.h also pulled in transport debug helpers and <iostream>.
+// Those are dropped here: opcode_to_str was debug-only, and print_hex is
+// reimplemented over printf. What remains is the portable core shared by bt /
+// state_mgr / cmd / audio: the DualSense CRC helpers and the SetStateData
+// output-report layout.
 //
 #pragma once
 

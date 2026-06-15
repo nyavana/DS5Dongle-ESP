@@ -1,12 +1,12 @@
 //
 // Bluetooth BR/EDR HID host (ported from legacy-pico/src/bt.cpp).
 //
-// The Pico build was a hand-rolled HID host over raw BTstack L2CAP (manual
-// inquiry + class-of-device filter, SSP pairing, explicit PSM 0x11/0x13
-// channels, hand-built 0xA2/0xA3/0x43/0x53 transaction framing). On ESP-IDF
-// this is re-implemented on the Bluedroid **esp_hidh** BR/EDR HID host (design
-// D1): esp_hidh manages SDP, the HID control/interrupt L2CAP channels, pairing,
-// bonding (NVS) and reconnection, and exposes input/feature reports as events.
+// The reference build was a hand-rolled HID host over raw L2CAP (manual inquiry
+// + class-of-device filter, SSP pairing, explicit PSM 0x11/0x13 channels, and
+// hand-built 0xA2/0xA3/0x43/0x53 transaction framing). On ESP-IDF this is
+// re-implemented on the Bluedroid **esp_hidh** BR/EDR HID host (design D1):
+// esp_hidh manages SDP, HID control/interrupt channels, pairing, bonding (NVS)
+// and reconnection, and exposes input/feature reports as events.
 //
 // esp_hidh answers the design's open question: it DOES pass raw DualSense
 // reports (INPUT event = report_id + raw data) and supports class-of-device-
@@ -57,6 +57,10 @@ static size_t s_map_index = 0;
 static int8_t s_rssi = 0;
 static bool s_check_dse = false;
 static bool s_is_dse = false;  // TODO(group 5): mirror into device-config is_dse
+
+// Filled by components/battery_led in group 7. Kept weak so the BT host remains
+// usable if the indicator component is omitted in a reduced build.
+__attribute__((weak)) void battery_led_on_disconnect(void) {}
 
 static std::unordered_map<uint8_t, std::vector<uint8_t>> s_feature;
 static SemaphoreHandle_t s_feature_mtx = nullptr;
@@ -161,7 +165,8 @@ static void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id,
             if (param->close.dev) {
                 esp_hidh_dev_free(param->close.dev);
             }
-            // TODO(group 5): tud_disconnect(); (group 7): battery_led_on_disconnect().
+            battery_led_on_disconnect();
+            // TODO(group 5): tud_disconnect().
             esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
             start_discovery();
             break;

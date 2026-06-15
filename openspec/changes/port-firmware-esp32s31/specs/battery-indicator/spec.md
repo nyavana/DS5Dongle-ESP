@@ -2,7 +2,7 @@
 
 ### Requirement: Low-battery LED indication
 
-The firmware SHALL drive a board LED (GPIO or `led_strip`/RMT) to indicate low controller battery, deriving battery percent/state from the parsed DualSense input report, replacing the Pico CYW43 onboard-LED path. The indicator SHALL respect the `disable_pico_led` configuration option.
+The firmware SHALL drive a plain ESP-IDF GPIO LED path to indicate low controller battery, deriving battery percent/state from the parsed DualSense input report, replacing the Pico CYW43 onboard-LED path. The default build SHALL allow the LED GPIO to be disabled when no physical S31 board pin is known, and the indicator SHALL respect the `disable_pico_led` configuration option.
 
 #### Scenario: Low battery blinks the LED
 

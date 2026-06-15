@@ -11,7 +11,7 @@ extern uint8_t mute[2]; // 0: SPEAKER(0x02) 1: MIC(0x05)
 extern float volume[2]; // 0: SPEAKER(0x02) 1: MIC(0x05)
 
 // Install the esp_tinyusb device stack with the ported DualSense descriptors
-// and start the USB device task (replaces the Pico board_init / tusb_init).
+// and start the USB device task.
 void usb_init();
 
 #endif //DS5_BRIDGE_USB_H

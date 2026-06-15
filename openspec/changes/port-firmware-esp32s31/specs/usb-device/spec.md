@@ -2,12 +2,12 @@
 
 ### Requirement: DualSense USB device emulation
 
-The firmware SHALL enumerate to a USB host as a DualSense controller using the `esp_tinyusb` managed component, presenting the same device/configuration/HID/UAC descriptors as the Pico build (ported from `usb_descriptors.cpp` / `tusb_config.h`). USB device bring-up SHALL use `esp_tinyusb` init in place of `board_init` / `tusb_init`.
+The firmware SHALL enumerate to a USB host as a DualSense HID controller using the `esp_tinyusb` managed component, presenting the DualSense device/configuration/HID descriptors ported from `usb_descriptors.cpp` / `tusb_config.h`. USB device bring-up SHALL use `esp_tinyusb` init in place of `board_init` / `tusb_init`. UAC audio descriptors from the Pico build SHALL remain a documented hardware follow-up rather than a default-on autonomous-build requirement.
 
 #### Scenario: Host enumerates the dongle as a DualSense
 
 - **WHEN** the dongle is attached to a USB host
-- **THEN** it enumerates with the DualSense VID/PID and descriptor set, exposing the HID interface and the UAC audio interfaces
+- **THEN** it enumerates with the DualSense VID/PID and HID interface needed for controller input/output reports
 
 #### Scenario: TinyUSB is driven by esp_tinyusb, not the Pico BSP
 
@@ -35,23 +35,23 @@ The firmware SHALL service HID SET_REPORT / interrupt-OUT traffic: command repor
 #### Scenario: Output report triggers BT output
 
 - **WHEN** the host sends an interrupt-OUT report with leading byte `0x02`
-- **THEN** the firmware updates the output state and, unless the speaker interface is active, sends a `0x31` output report to the controller over Bluetooth
+- **THEN** the firmware updates the output state and, unless a future validated audio path reports speaker active, sends a `0x31` output report to the controller over Bluetooth
 
 #### Scenario: Command write applies config
 
 - **WHEN** the host sends a SET_REPORT for command report `0xf6`
 - **THEN** the firmware dispatches it to the device-config command handler
 
-### Requirement: USB audio control interface
+### Requirement: Deferred USB audio control boundary
 
-The firmware SHALL expose the UAC audio control entities (speaker and mic mute/volume) and track the active speaker alternate setting so the audio path knows when the host has opened the speaker stream.
+The firmware SHALL preserve the speaker/mic mute and volume state contract needed by the future UAC path, but SHALL NOT expose UAC audio control entities or speaker alternate-setting tracking by default until TinyUSB UAC is enabled and validated on S31 hardware.
 
-#### Scenario: Speaker interface activation tracked
+#### Scenario: Speaker remains inactive without UAC
 
-- **WHEN** the host sets the speaker streaming interface to a non-zero alternate setting
-- **THEN** the firmware marks the speaker active so audio frames are forwarded to the controller
+- **WHEN** the autonomous build runs with HID-only descriptors
+- **THEN** the audio path reports speaker inactive so normal HID output reports continue over `0x31`
 
-#### Scenario: Mute/volume requests serviced
+#### Scenario: UAC follow-up is explicit
 
-- **WHEN** the host issues a UAC get/set request for the speaker or mic mute/volume entity
-- **THEN** the firmware updates or returns the corresponding mute/volume state
+- **WHEN** the completion report is written
+- **THEN** it identifies UAC descriptor enablement and mute/volume control requests as hardware-validation follow-up work

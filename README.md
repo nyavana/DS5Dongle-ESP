@@ -3,8 +3,11 @@
 > Turn an **ESP32-S31** into a wireless DualSense (DS5) dongle.
 > Migration of the [Pico 2W DualSense bridge](#original-project) to ESP-IDF.
 
-**Status:** 🚧 scaffolding — project skeleton + toolchain only, no subsystem
-ported yet. See [`docs/MIGRATION.md`](docs/MIGRATION.md).
+**Status:** build-verified ESP32-S31 migration scaffold. Boot, USB HID, BR/EDR
+HID host, report bridge, NVS config/commands, state management, audio scaffold,
+battery LED scaffold, and CI wiring are ported and build clean. Runtime hardware
+bring-up remains pending. See [`docs/MIGRATION.md`](docs/MIGRATION.md) and
+[`docs/COMPLETION.md`](docs/COMPLETION.md).
 
 ## Why the ESP32-S31
 
@@ -23,7 +26,7 @@ DS5Dongle-ESP/            (bare-repo worktree root — see ../LAYOUT.md)
     sdkconfig.defaults    reproducible config defaults
     partitions.csv
     main/                 app_main entry (thin)
-    components/           ported subsystems land here (bt / usb / audio / ...)
+    components/           ported subsystems (usb / bthost / bridge / config / ...)
     legacy-pico/          original Pico sources, kept for side-by-side porting
     docs/MIGRATION.md     module-by-module port plan
     .devcontainer/        ESP-IDF Docker dev environment
@@ -64,9 +67,17 @@ tag has it yet). So you need a master-based IDF. Two options:
 - **Native install** — clone ESP-IDF `master` and run `./install.sh esp32s31`,
   then `. ./export.sh` (needs a supported Python, ~3.9–3.13).
 
-Verified 2026-06-03 on `espidf:s31` (IDF v6.2.0 / master): this scaffold builds
-clean for `esp32s31` (incl. `esp_tinyusb`). See [`docs/MIGRATION.md`](docs/MIGRATION.md)
-for remaining caveats (Kconfig symbols, Opus component, flashing on WSL2).
+Verified 2026-06-15 on `espidf:s31` (IDF v6.2.0 / master): the current
+migration scaffold builds clean for `esp32s31` and produces
+`ds5dongle_esp32s31.bin`. Runtime pairing, USB enumeration against a real host,
+audio, and LED behavior still require physical ESP32-S31 hardware.
+
+### CI container image
+
+GitHub Actions builds firmware inside
+`ghcr.io/nyavana/ds5dongle-esp32s31-idf:master`. Publish or refresh that image by
+running the `Build ESP-IDF S31 container` workflow. The firmware workflow cannot
+pull the container until that image exists in GHCR.
 
 ## Original project
 

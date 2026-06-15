@@ -7,6 +7,7 @@ dependencies:
   # the dongle uses to present itself to the host as the DualSense.
   espressif/esp_tinyusb: "^1.4.0"
 
-  # Opus codec for DualSense audio (replaces the Pico build's lib/opus submodule).
-  # Confirm the package id/version against components.espressif.com before enabling.
-  # espressif/opus: "*"
+  # Future DualSense speaker Opus encode. Keep disabled until the Group 6 scaffold
+  # is in place and real S31 hardware can validate UAC + audio timing. Do not
+  # vendor xiph/opus in this migration pass.
+  # espressif/esp_audio_codec: "^2.5.0"

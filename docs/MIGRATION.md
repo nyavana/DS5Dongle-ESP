@@ -1,66 +1,80 @@
-# DS5Dongle — Pico 2W → ESP32-S31 migration
+# DS5Dongle - Pico 2W to ESP32-S31 migration
 
-Status: **scaffolding** (project skeleton + toolchain layout). No subsystem is
-ported yet.
+Status: **build-verified ESP32-S31 migration scaffold**.
+
+The ESP-IDF project now builds clean for the `esp32s31` preview target with these
+subsystems ported and wired:
+
+- boot/app_main, NVS init, task watchdog, and report-buffer setup;
+- USB HID device descriptors/callbacks through `esp_tinyusb`;
+- BR/EDR HID host through Bluedroid `esp_hidh`;
+- BT input to USB HID input bridge;
+- USB output/feature reports to BT output reports;
+- NVS-backed config, custom command protocol, and output-state packing;
+- default-disabled audio scaffold behind `audio.h`, including headset state,
+  queue/task shape, guarded speaker payload state, counters, and `0x36` packet
+  helper;
+- plain GPIO low-battery LED scaffold behind `battery_led.h`, disabled by
+  default until the board GPIO is known.
+
+Still pending: runtime validation on physical ESP32-S31 hardware.
 
 ## Why ESP32-S31
 
-The DualSense's wireless link is **Bluetooth Classic (BR/EDR) HID**, and the
-dongle must also be a **USB device** to the host. The Pico 2W (CYW43439 + RP2350)
-did both. Of the ESP32 family:
+The DualSense wireless link is **Bluetooth Classic (BR/EDR) HID**, and the dongle
+must also be a **USB device** to the host. The Pico 2W did both using CYW43439
+plus TinyUSB. Of the ESP32 family:
 
-- **ESP32-S3** — has native USB-OTG but is **BLE-only** (no BR/EDR) → cannot talk
-  to the DualSense. ✗
-- **Original ESP32** — has BR/EDR but **no native USB device** peripheral. ✗
-- **ESP32-S31** — has **both** Bluetooth 5.4 Classic (BR/EDR) **and** USB-OTG
-  (high speed), plus 320 MHz native clock and HW BT-audio sync. ✓
+- **ESP32-S3** has native USB-OTG but is BLE-only, so it cannot talk to the
+  DualSense BR/EDR HID profile.
+- **Original ESP32** has BR/EDR but no native USB device peripheral.
+- **ESP32-S31** has both Bluetooth Classic and native USB-OTG, plus a native
+  320 MHz clock.
 
 So the S31 is the first single-chip ESP target that fits this project.
 
 ## Source of truth for the original code
 
-- `../master` worktree — pristine Pico 2W build (also the upstream `master`).
-- `./legacy-pico/` — same sources copied onto this branch for side-by-side
-  porting. Submodules (`lib/opus`, `lib/WDL`) were dropped here; Opus comes from
-  the ESP Component Registry, WDL's resampler can be vendored if still needed.
+- `../master` worktree: pristine Pico 2W build and upstream shipping reference.
+- `./legacy-pico/`: same sources mirrored on this branch for side-by-side porting.
+  Submodules are not used by the current S31 build.
 
 ## Module mapping
 
-| Pico module | Role | ESP32-S31 / ESP-IDF target | Notes |
-|---|---|---|---|
-| `bt.cpp`, `btstack_config.h` | BTstack BR/EDR **HID host** → DualSense | Bluedroid Classic HID host (`esp_hidh` / GAP BR/EDR) | Biggest rewrite: BTstack API → Bluedroid event callbacks |
-| `usb.cpp`, `usb_descriptors.cpp`, `tusb_config.h` | TinyUSB **device** posing as DualSense | `esp_tinyusb` managed component | Descriptors port closely; TinyUSB underneath both |
-| `audio.cpp` | Opus encode/decode + resample | `opus` component + I2S | S31 dual-I2S w/ HW BT-audio sync removes the manual resample timing pain |
-| `config.cpp` | config persisted to flash | NVS | |
-| `cmd.cpp` | custom HID feature-report commands | port as-is | |
-| `state_mgr.cpp` | DualSense output-state mgmt | port as-is | |
-| `battery_led.cpp` | low-battery LED blink | `led_strip` (RMT) or GPIO | CYW43 onboard LED → board LED |
-| `main.cpp` | single super-loop + HW setup | `app_main` + FreeRTOS tasks | see below |
+| Pico module | Role | ESP32-S31 / ESP-IDF status |
+|---|---|---|
+| `main.cpp` | single super-loop and hardware setup | ported to thin `app_main()` plus FreeRTOS tasks/callbacks |
+| `usb.cpp`, `usb_descriptors.cpp`, `tusb_config.h` | TinyUSB device posing as DualSense | ported as `components/usb` using `esp_tinyusb` and HID-only custom descriptors |
+| `bt.cpp`, `btstack_config.h` | BTstack BR/EDR HID host | ported as `components/bthost` using Bluedroid `esp_hidh` |
+| input/output bridge from `main.cpp` | BT `0x31` input to USB `0x01`, USB output to BT `0x31` | ported as `components/bridge` plus `components/report_buffer` |
+| `config.cpp` | config persisted to raw flash | ported as `components/config` using NVS |
+| `cmd.cpp` | custom HID feature-report commands | ported as `components/cmd` |
+| `state_mgr.cpp` | DualSense output-state packing | ported as `components/state_mgr` |
+| `audio.cpp` | UAC input, haptics resample, Opus speaker packets | scaffold ported as `components/audio`; runtime UAC/Opus deferred to hardware bring-up |
+| `battery_led.cpp` | low-battery LED blink | ported as `components/battery_led`; GPIO disabled by default until board pin is known |
 
-## `main.cpp` hardware calls → ESP-IDF
+## `main.cpp` hardware calls to ESP-IDF
 
 | Pico call | Replacement |
 |---|---|
-| `vreg_set_voltage`, `set_sys_clock_khz(320000)` | sdkconfig CPU freq (S31 native 320 MHz; no overclock) |
-| `cyw43_arch_*` (BT bring-up + LED) | native S31 Bluetooth controller + board GPIO/LED |
+| `vreg_set_voltage`, `set_sys_clock_khz(320000)` | `sdkconfig.defaults` CPU frequency; S31 runs 320 MHz natively |
+| `cyw43_arch_*` BT bring-up | native S31 Bluetooth controller + Bluedroid |
+| `cyw43_arch_gpio_put` LED | plain ESP-IDF GPIO in `components/battery_led`; pin disabled until real board is known |
 | `hardware/watchdog.h` | `esp_task_wdt` |
 | `critical_section_t` | `portMUX_TYPE` / `taskENTER_CRITICAL` |
-| `board_init`, `tud_*` | `esp_tinyusb` init + TinyUSB device callbacks |
-| super-loop polling | BT/USB event callbacks + dedicated FreeRTOS tasks |
+| `board_init`, `tud_*` | `esp_tinyusb` init plus TinyUSB callbacks |
+| super-loop polling | BT/USB event callbacks plus FreeRTOS tasks |
 
-## Toolchain status (verified 2026-06-03)
+## Toolchain status
 
-ESP32-S31 support is **only in ESP-IDF `master`**, as a **preview target**:
+ESP32-S31 support is only in ESP-IDF `master` as a preview target:
 
-- `master` has the SoC target (`components/soc/esp32s31/...`) and a dedicated
-  BT controller lib (`components/bt/controller/lib_esp32s31`). ✅
-- It is in `PREVIEW_TARGETS` (`['linux', 'esp32h21', 'esp32h4', 'esp32s31']`),
-  so it is **not** in `idf.py --list-targets` and requires the `--preview`
-  flag: `idf.py --preview set-target esp32s31`.
-- **No tagged release** includes it yet (latest are v6.0.1 / v5.5.4), and the
-  stock `espressif/idf:latest` image (v6.1-dev) does not list it.
+- the target is `esp32s31`;
+- it requires `idf.py --preview set-target esp32s31`;
+- no tagged ESP-IDF release or stock `espressif/idf` image is assumed to contain
+  it yet for this project.
 
-**Toolchain used here:** a master-based Docker image `espidf:s31` (IDF v6.2.0),
+Toolchain used here: a master-based Docker image `espidf:s31` (IDF v6.2.0),
 built with:
 
 ```bash
@@ -71,31 +85,47 @@ docker build -t espidf:s31 \
   "https://github.com/espressif/esp-idf.git#master:tools/docker"
 ```
 
-**Verified build (2026-06-03):** stock `hello_world` and this scaffold both
-build clean for `esp32s31` on `espidf:s31`; `esp_tinyusb` compiles for the
-target; output `ds5dongle_esp32s31.bin` (~179 KB).
+Canonical local build gate:
 
-Because this tracks `master`, expect APIs/Kconfig to shift and treat
-BT-Classic/USB-on-S31 as not-yet-stable. Re-check after any IDF update, and
-switch to the first tagged release that lists `esp32s31` once one ships.
+```bash
+docker run --rm -v "$PWD":/p -w /p espidf:s31 \
+  idf.py --preview set-target esp32s31 build
+```
 
-## Open items / caveats
+Verified 2026-06-15: the current migration scaffold builds clean and produces
+`build/ds5dongle_esp32s31.bin`. The generated app was `0x13eac0` bytes with about
+59% free in the 3 MB app partition.
 
-- **Target string**: `esp32s31` is a *preview* target on IDF master, so it is
-  **not** shown by `idf.py --list-targets`; select it with
-  `idf.py --preview set-target esp32s31`.
-- **Kconfig symbols** in `sdkconfig.defaults` (`CONFIG_BT_CLASSIC_ENABLED`,
-  CPU-freq symbol, etc.) are starting points — verify in `menuconfig`.
-- **Opus registry package** id/version is a TODO in `main/idf_component.yml`.
-- **CI**: `.github/workflows/*` still build the Pico `.uf2`; port to `idf.py build`.
-- **Audio sync**: revisit the Pico's manual resampling now that the S31 offers
-  hardware BT-audio synchronization.
+Because this tracks ESP-IDF `master`, re-check `sdkconfig.defaults` and component
+APIs after any IDF image refresh. Switch to the first tagged ESP-IDF release that
+officially lists `esp32s31` once that is available.
 
-## Suggested porting order
+## Current open items
 
-1. Boot + logging on real S31 hardware (validate target/clock/sdkconfig).
-2. `usb` — enumerate as the DualSense to a host (no controller yet).
-3. `bt` — BR/EDR HID host connect to the DualSense; bridge input reports to USB.
-4. `state_mgr` + `cmd` — output reports (rumble/LED) back to the controller.
-5. `audio` — Opus + I2S speaker/mic path.
-6. `config` (NVS) + `battery_led` polish.
+- **Future audio runtime**: once hardware is available, validate HID+UAC composite
+  enumeration, read 4-channel UAC host audio, test haptics resampling, and enable
+  Opus encode through `espressif/esp_audio_codec^2.5.0`. The current scaffold
+  does not enable UAC, does not inject `CFG_TUD_AUDIO`, does not vendor
+  `xiph/opus`, does not vendor WDL, and does not send live `0x36` audio by
+  default.
+- **Battery LED hardware pin**: the component is ported, but
+  `DS5_BATTERY_LED_GPIO` defaults to `-1`. Set the real GPIO or switch to
+  `led_strip` later only if the chosen board requires it.
+- **CI**: the workflows now build ESP32-S31 `.bin` artifacts using the published
+  GHCR toolchain image `ghcr.io/nyavana/ds5dongle-esp32s31-idf:master`. Run
+  `Build ESP-IDF S31 container` once before relying on normal firmware CI; until
+  that image exists, firmware CI cannot pull its job container.
+- **Runtime validation**: BR/EDR pairing, raw report pass-through, USB enumeration,
+  config commands, reconnect behaviour, and audio timing all need real S31
+  hardware before they can be called verified.
+
+See [`COMPLETION.md`](COMPLETION.md) for the build-verified scope and the
+hardware bring-up deferral list.
+
+## Suggested Hardware Bring-Up Order
+
+1. Run `Build ESP-IDF S31 container` once to publish or refresh the GHCR
+   toolchain image if firmware CI cannot pull it.
+2. When hardware arrives, run bring-up in this order: boot logs, USB HID
+   enumeration, BR/EDR pairing, input/output report traffic, config commands,
+   reconnect/bond persistence, then HID+UAC/audio.

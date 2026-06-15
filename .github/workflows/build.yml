@@ -4,16 +4,17 @@ on:
   push:
     branches:
       - "**"
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: write
+  packages: read
 
 jobs:
   build:
-    name: Build UF2 artifacts
+    name: Build ESP32-S31 firmware
     uses: ./.github/workflows/build-firmware.yml
     with:
-      version: ${{ github.sha }}   # reusable build shortens a full SHA to 7
-      picow: true
-      no_batt_led_check: true
+      version: ${{ github.sha }}
+      container_image: ghcr.io/nyavana/ds5dongle-esp32s31-idf:master

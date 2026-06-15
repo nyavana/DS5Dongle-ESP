@@ -4,11 +4,10 @@
 //   - ../master worktree            (pristine Pico 2W reference)
 //   - ./legacy-pico/src             (in-branch reference copy)
 //
-// The Pico build ran everything from a single main() super-loop
-// (cyw43_arch_poll / tud_task / audio_loop / interrupt_loop). On ESP-IDF that
-// dissolves into app_main() doing ordered subsystem bring-up, after which the
-// work is driven by FreeRTOS tasks and Bluedroid/TinyUSB event callbacks — no
-// busy loop. Each subsystem is ported into its own component under
+// The reference build ran everything from a single main() super-loop. On
+// ESP-IDF that dissolves into app_main() doing ordered subsystem bring-up, after
+// which the work is driven by FreeRTOS tasks and Bluedroid/TinyUSB event
+// callbacks. Each subsystem is ported into its own component under
 // components/<name>/ and its init call is wired in here by its porting group.
 // Port plan: docs/MIGRATION.md.
 
@@ -24,10 +23,8 @@
 #include "usb.h"               // group 2 — esp_tinyusb DualSense device
 #include "bt.h"                // group 3 — Bluedroid BR/EDR HID host
 #include "bridge.h"            // group 4 — BT <-> USB HID report relay
-// Subsystem headers are included as each component is ported:
-//   #include "bridge.h"       // group 4 — BT <-> USB HID report relay
-//   #include "audio.h"        // group 6 — Opus + resampler over BT
-//   #include "battery_led.h"  // group 7 — low-battery indicator
+#include "audio.h"             // group 6 — default-disabled audio scaffold
+#include "battery_led.h"       // group 7 — low-battery indicator
 
 static const char *TAG = "ds5dongle";
 
@@ -49,8 +46,7 @@ extern "C" void app_main(void) {
     // Persistent storage first — config and BT bonds depend on it.
     init_nvs();
 
-    // Shared BT-input -> USB-input report buffer (portMUX-guarded; replaces the
-    // Pico critical_section_t + interrupt_in_data global).
+    // Shared BT-input -> USB-input report buffer, guarded for FreeRTOS tasks.
     report_buffer_init();
 
     // Subsystem bring-up in dependency order. Each call is added by its porting
@@ -58,13 +54,13 @@ extern "C" void app_main(void) {
     // the IDF task watchdog (CONFIG_ESP_TASK_WDT_*, sdkconfig.defaults); the
     // report-bridge task subscribes to it via esp_task_wdt_add in group 4.
     config_load();                                      // group 5 (NVS)
-    usb_init();                                          // group 2
     bt_init();                                           // group 3
+    usb_init();                                          // group 2
     bridge_init();                                       // group 4 (registers on_bt_data + send task)
-    //   audio_init();                                      // group 6
-    //   battery_led_init();                                // group 7
+    audio_init();                                        // group 6 (runtime deferred)
+    battery_led_init();                                  // group 7 (GPIO disabled until pin is known)
 
-    ESP_LOGI(TAG, "boot complete; subsystems pending port (see docs/MIGRATION.md)");
+    ESP_LOGI(TAG, "boot complete; hardware runtime validation pending (see docs/MIGRATION.md)");
 
     // app_main returns: TinyUSB/Bluedroid/bridge run on their own FreeRTOS
     // tasks. No Pico super-loop remains.

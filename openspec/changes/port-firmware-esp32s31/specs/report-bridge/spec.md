@@ -30,7 +30,7 @@ The firmware SHALL support the configured polling-rate modes: modes `0` (250 Hz)
 
 ### Requirement: Output report relay (USB → BT) and state management
 
-The firmware SHALL build DualSense output report `0x31` from host output reports via the output-state manager (`state_mgr`), incrementing the report sequence counter, and send it over Bluetooth — except while the speaker audio interface is active (the audio path then carries output state inside its `0x36` report).
+The firmware SHALL build DualSense output report `0x31` from host output reports via the output-state manager (`state_mgr`), incrementing the report sequence counter, and send it over Bluetooth. It SHALL suppress standalone `0x31` output only when a future, validated audio subsystem explicitly reports that the speaker audio interface is active; the default audio scaffold keeps speaker inactive.
 
 #### Scenario: Host output becomes a BT 0x31 report
 
@@ -39,5 +39,5 @@ The firmware SHALL build DualSense output report `0x31` from host output reports
 
 #### Scenario: Output suppressed during active speaker stream
 
-- **WHEN** the host sends output report `0x02` while the speaker interface is active
+- **WHEN** the host sends output report `0x02` while a future validated audio path reports the speaker interface active
 - **THEN** the standalone `0x31` output report is not sent (output state rides in the audio `0x36` report instead)

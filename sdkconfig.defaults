@@ -34,8 +34,8 @@ CONFIG_BT_HID_HOST_ENABLED=y
 #     built-in VID/PID descriptor.
 #     CFG_TUD_HID = CONFIG_TINYUSB_HID_COUNT (default 0 = HID off); set to 1 to
 #     enable the HID device class. NOTE: esp_tinyusb exposes no UAC/audio
-#     Kconfig (CFG_TUD_AUDIO is absent) — the USB-audio path is resolved in
-#     group 6 by injecting the TinyUSB audio config directly. ---
+#     Kconfig (CFG_TUD_AUDIO is absent). The current migration keeps UAC
+#     hardware-deferred and does not inject TinyUSB audio config in this pass. ---
 CONFIG_TINYUSB_HID_COUNT=1
 
 # --- Task watchdog: IDF-managed TWDT replaces the Pico hardware/watchdog.
@@ -51,7 +51,7 @@ CONFIG_ESP_TASK_WDT_INIT=y
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
 
-# --- Custom partition table (room for BT + USB + Opus firmware) ---
+# --- Custom partition table (room for BT + USB now, future audio later) ---
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 

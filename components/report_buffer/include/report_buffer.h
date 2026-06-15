@@ -1,11 +1,10 @@
 //
 // Shared DualSense input-report buffer.
 //
-// On the Pico build this was a bare `uint8_t interrupt_in_data[63]` global plus
-// a `report_dirty` flag, guarded by a `critical_section_t`. The BT input
-// callback wrote it and the USB super-loop read it. On ESP-IDF those run on
-// different FreeRTOS tasks, so the buffer + dirty flag move behind a
-// portMUX_TYPE critical section (firmware-boot spec: "Concurrency primitives").
+// On the reference build this was a bare `uint8_t interrupt_in_data[63]` global
+// plus a `report_dirty` flag. On ESP-IDF the BT input callback and USB send loop
+// run on different FreeRTOS tasks, so the buffer + dirty flag move behind a
+// portMUX_TYPE critical section.
 //
 #pragma once
 

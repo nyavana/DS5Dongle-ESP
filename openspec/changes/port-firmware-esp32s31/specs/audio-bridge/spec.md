@@ -1,33 +1,34 @@
 ## ADDED Requirements
 
-### Requirement: Host audio capture and channel split
+### Requirement: Audio component scaffold and deferred runtime boundary
 
-The firmware SHALL read 4-channel UAC audio delivered by the USB host, applying the configured speaker volume/mute gain to the speaker channels and the configured haptics gain to the haptics channels, replacing the Pico `tud_audio_read` path with the ESP TinyUSB audio API.
+The firmware SHALL provide a buildable `components/audio` implementation behind the existing `audio.h` API (`audio_init`, `set_headset`) and SHALL keep the runtime USB-UAC capture and Opus speaker encode path default-disabled until S31 hardware can validate HID+UAC composite enumeration and audio timing.
 
-#### Scenario: Four-channel host audio split
+#### Scenario: Audio scaffold initializes safely
 
-- **WHEN** the host streams 4-channel audio and frames are available
-- **THEN** the firmware extracts the speaker pair and the haptics pair, applying speaker gain (zeroed when muted) and haptics gain respectively
+- **WHEN** firmware boots without UAC enabled
+- **THEN** `audio_init` completes without changing USB descriptors, consuming host audio, sending `0x36` reports, or suppressing normal `0x31` output reports
 
-### Requirement: Haptics resampling and packetization
+#### Scenario: Headset state is retained
 
-The firmware SHALL resample the haptics channels from 48 kHz to 3 kHz, convert to signed 8-bit, accumulate a 64-byte block, and emit it inside the DualSense audio output report `0x36` together with the current output state, sending it to the controller over Bluetooth.
+- **WHEN** the report bridge detects a headset-presence change
+- **THEN** `set_headset` records the state for the future speaker/headset audio sub-mode
 
-#### Scenario: Haptics block sent to controller
+### Requirement: Audio bridge structure and packetization helpers
 
-- **WHEN** a full 64-byte haptics block has been accumulated
-- **THEN** the firmware builds a `0x36` report (sequence/packet counters, set-state data, haptics block, and speaker block when enabled) and writes it to the controller over Bluetooth
+The firmware SHALL preserve the Pico audio bridge structure in a safe scaffold: FreeRTOS task/queue shape in place of `multicore_launch_core1`/`queue_t`, a `portMUX`-guarded latest speaker buffer in place of `opus_cs`, sequence/packet counters, and helpers for building DualSense audio report `0x36` with output-state, haptics, and speaker/headset sections.
 
-### Requirement: Speaker Opus encoding on a second core
+#### Scenario: Packet helper preserves report shape
 
-The firmware SHALL encode the speaker audio with Opus on a second core / dedicated task (mirroring the Pico `core1` encoder: 48 kHz stereo, 10 ms frames, ~200-byte frames), exchanging the encoded buffer with the report path under a critical section, and SHALL select the speaker vs. headset audio sub-mode based on the headset-presence state.
+- **WHEN** future UAC/audio data supplies a full haptics block and latest speaker payload
+- **THEN** the helper can build a `0x36` report with sequence/packet counters, current output state, haptics block, and speaker/headset sub-mode matching the stored headset state
 
-#### Scenario: Opus encode runs concurrently
+### Requirement: Future UAC and Opus dependency plan
 
-- **WHEN** speaker audio frames are buffered
-- **THEN** a separate core/task resamples and Opus-encodes them and publishes the latest encoded frame for the next `0x36` report under a guarded critical section
+The firmware SHALL document the deferred runtime path: enable TinyUSB UAC descriptors/callbacks on hardware, read 4-channel host audio, apply speaker mute/volume and haptics gain, resample haptics from 48 kHz to 3 kHz, and use `espressif/esp_audio_codec^2.5.0` for future Opus speaker encode. The migration SHALL NOT vendor `xiph/opus` in this pass.
+The migration SHALL NOT vendor WDL in this pass; haptics resampling remains an explicit hardware-follow-up stub.
 
-#### Scenario: Headset vs speaker routing
+#### Scenario: Runtime audio remains a hardware follow-up
 
-- **WHEN** the headset-presence state indicates a headset is connected
-- **THEN** the audio block in the `0x36` report uses the headset sub-mode rather than the speaker sub-mode
+- **WHEN** the completion report is written
+- **THEN** it lists UAC enablement, composite enumeration validation, 4-channel audio capture, haptics resampling, Opus encode, and `0x36` BT timing as unverified hardware follow-up items

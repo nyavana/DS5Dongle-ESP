@@ -15,7 +15,7 @@
 ## 2. USB device — HID only (usb-device)
 
 - [x] 2.1 Create `components/usb/` (`CMakeLists.txt` + `idf_component_register`); add `esp_tinyusb` to `main/idf_component.yml`
-- [x] 2.2 Port `usb_descriptors.cpp` / `tusb_config.h` verbatim and feed them to `esp_tinyusb` as custom descriptors (HID interface first; leave UAC audio interfaces stubbed for group 6)
+- [x] 2.2 Port `usb_descriptors.cpp` / `tusb_config.h` and feed them to `esp_tinyusb` as custom descriptors (HID interface first; leave UAC audio interfaces as hardware-deferred follow-up)
 - [x] 2.3 Port the `tud_hid_get_report_cb` / `tud_hid_set_report_cb` skeletons, routing command IDs (`0xf6`–`0xf9`) and feature IDs to stubs to be filled by groups 4–5
 - [x] 2.4 Initialize USB via `esp_tinyusb` (replace `board_init` / `tusb_init`); expose `usb_init()`
 - [x] 2.5 Wire `usb_init()` into `app_main()`
@@ -46,34 +46,34 @@
 - [x] 5.1 Create `components/config/` and port `config.cpp`; replace `hardware/flash`/`hardware/sync` with NVS blob get/set (namespace `ds5`, key `config`)  [ported early — cmd/bridge depend on it]
 - [x] 5.2 Keep magic/version/size/CRC validation and per-field range checks → defaults (`config_valid`)
 - [x] 5.3 Implement `config_load` (NVS or defaults) and `config_save` (write + read-back verify)
-- [ ] 5.4 Route `disable_pico_led` to the battery-indicator/LED control instead of `cyw43_arch_gpio_put`  [deferred to group 7 — battery_led]
+- [x] 5.4 Route `disable_pico_led` to the battery-indicator/LED control instead of `cyw43_arch_gpio_put`  [deferred to group 7 — battery_led]
 - [x] 5.5 Confirm `0xf6`–`0xf9` command paths (config get/set/save, firmware version, RSSI, USB reconnect) work end-to-end against the ported config/bt/usb  [wired + builds; runtime confirmation needs hardware]
 - [x] 5.6 Wire `config_load()` into `app_main()` before bt/usb init
 - [x] 5.7 Build-gate: clean `esp32s31` build; commit `feat: NVS config + command interface`
 
 ## 6. Audio bridge (audio-bridge)
 
-- [ ] 6.1 Resolve the Opus ESP Component Registry package id/version in `main/idf_component.yml` (vendor Opus only if the registry entry is unusable)
-- [ ] 6.2 Create `components/audio/`; vendor the WDL resampler used by `audio.cpp`
-- [ ] 6.3 Add the UAC audio interfaces to the USB descriptors (from group 2) and the `tud_audio_*` control callbacks (mute/volume, speaker alt-setting tracking)
-- [ ] 6.4 Port `audio_loop`: read 4-ch host audio (`tud_audio_read` → ESP audio API), split speaker/haptics with gains, resample haptics 48k→3k, build `0x36` report, `bt_write`
-- [ ] 6.5 Port the Opus encoder onto a FreeRTOS task pinned to the app core (replacing `multicore_launch_core1`), with a FreeRTOS queue (replacing `queue_t`) and `portMUX` (replacing `opus_cs`)
-- [ ] 6.6 Implement `set_headset` routing (speaker vs headset sub-mode) driven by the bridge's headset-bit detection
-- [ ] 6.7 Wire `audio_init()` into `app_main()`
-- [ ] 6.8 Build-gate: clean `esp32s31` build; commit `feat: audio bridge (Opus + resampler over BT)`
+- [x] 6.1 Record the improved dependency decision: use `espressif/esp_audio_codec^2.5.0` for future Opus encode on ESP32-S31; do **not** vendor `xiph/opus` in this pass
+- [x] 6.2 Create `components/audio/` behind the existing `audio.h` API (`audio_init`, `set_headset`) with a default-disabled runtime path and clear TODOs for UAC capture, Opus encode, and hardware bring-up; do not ask for hardware choices during this group
+- [x] 6.3 Port the audio bridge scaffolding: FreeRTOS task/queue shape, `portMUX`-guarded speaker buffer, headset-state storage, counters, and `0x36` packet construction helpers based on the Pico logic
+- [x] 6.4 Keep USB UAC descriptors/capture/control callbacks hardware-deferred and default-off; do not inject `CFG_TUD_AUDIO` into `esp_tinyusb` or change the HID-only descriptor in this pass
+- [x] 6.5 Do **not** vendor WDL in this pass; keep haptics resampling behind an explicit stub/TODO and let the `0x36` helper accept already-prepared placeholder haptics/speaker payloads
+- [x] 6.6 Wire `audio_init()` into `app_main()` only as a harmless scaffold/no-op path that cannot suppress normal `0x31` output reports without a real speaker-active signal
+- [x] 6.7 Document the exact hardware follow-up: enable UAC in TinyUSB, validate HID+UAC composite enumeration, feed 4-channel host audio into haptics/speaker processing, and enable `esp_audio_codec` Opus encode
+- [x] 6.8 Build-gate: clean `esp32s31` build; commit `feat: audio bridge scaffold (runtime deferred)`
 
 ## 7. Battery indicator (battery-indicator)
 
-- [ ] 7.1 Create `components/battery_led/`; port `battery_led.cpp` driving a board GPIO / `led_strip` instead of the CYW43 onboard LED
-- [ ] 7.2 Derive battery percent/state from the parsed input report; honour `disable_pico_led`
-- [ ] 7.3 Implement disconnect/staleness handling (`battery_led_note_report`, `battery_led_on_disconnect`, timeout) wired to the bridge + BT disconnect event
-- [ ] 7.4 Wire `battery_led_init/tick` into `app_main()`/bridge
-- [ ] 7.5 Build-gate: clean `esp32s31` build; commit `feat: low-battery LED indicator`
+- [x] 7.1 Create `components/battery_led/`; port `battery_led.cpp` against a plain ESP-IDF GPIO path with a compile-time default disabled GPIO (`DS5_BATTERY_LED_GPIO=-1` or equivalent), not `led_strip`
+- [x] 7.2 Derive battery percent/state from the parsed input report; honour `disable_pico_led`
+- [x] 7.3 Implement disconnect/staleness handling (`battery_led_note_report`, `battery_led_on_disconnect`, timeout) wired to the bridge + BT disconnect event
+- [x] 7.4 Wire `battery_led_init/tick` into `app_main()`/bridge
+- [x] 7.5 Build-gate: clean `esp32s31` build; commit `feat: low-battery LED indicator`
 
 ## 8. CI, cleanup & report
 
-- [ ] 8.1 Port `.github/workflows/` from the Pico `.uf2` build to `idf.py --preview set-target esp32s31 build` on the `espidf:s31` image
-- [ ] 8.2 Update `main/CMakeLists.txt` REQUIRES and `components/README.md` / `docs/MIGRATION.md` to reflect the ported components and the chosen BT path
-- [ ] 8.3 Confirm no Pico SDK / BTstack / `cyw43` / `bsp/board_api` references remain in ported code (grep)
-- [ ] 8.4 Final build-gate: full clean `esp32s31` build from scratch
-- [ ] 8.5 Write the completion report: what was ported, the BT path chosen (esp_hidh vs raw L2CAP), resolved/unresolved open questions, and the explicit list of runtime paths (BR/EDR pairing, USB enumeration, audio) that could not be verified without physical S31 hardware
+- [x] 8.1 Port `.github/workflows/` from the Pico `.uf2` build to `idf.py --preview set-target esp32s31 build` on a published GHCR ESP-IDF S31 image (`ghcr.io/nyavana/ds5dongle-esp32s31-idf:master`); run the image workflow once before relying on firmware CI
+- [x] 8.2 Update `main/CMakeLists.txt` REQUIRES and `components/README.md` / `docs/MIGRATION.md` to reflect the ported components and the chosen BT path
+- [x] 8.3 Confirm no Pico SDK / BTstack / `cyw43` / `bsp/board_api` references remain in ported code (grep)
+- [x] 8.4 Final build-gate: full clean `esp32s31` build from scratch
+- [x] 8.5 Write the completion report: what was ported, the defaults chosen (esp_hidh, HID-only USB, no WDL/Opus/UAC runtime, GPIO battery LED), and the explicit list of hardware-bring-up deferrals (BR/EDR pairing, USB enumeration, HID+UAC, audio timing, board LED pin)

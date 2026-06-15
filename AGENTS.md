@@ -28,35 +28,49 @@ Canonical build gate:
 rtk docker run --rm -v "$PWD":/p -w /p espidf:s31 idf.py --preview set-target esp32s31 build
 ```
 
+CI uses the published container image
+`ghcr.io/nyavana/ds5dongle-esp32s31-idf:master`. If the firmware workflow cannot
+pull it, run `.github/workflows/build-toolchain-image.yml` first to publish the
+image.
+
 Do not edit generated `sdkconfig`; edit `sdkconfig.defaults` for reproducible
 configuration. `build/`, `managed_components/`, `dependencies.lock`, and generated
 firmware artifacts are ignored.
 
-For a documentation-only handoff/init, do not run the firmware build unless the
-user explicitly asks. Use OpenSpec and git status checks instead.
+For documentation-only work, OpenSpec validation and git status checks are often
+enough. Run the firmware build when the user asks for project status, build
+confidence, or a pre-implementation baseline.
 
 ## Current Handoff State
 
-This branch was started by Claude Code and is being handed to Codex. `CLAUDE.md`
-is still useful historical guidance, but this `AGENTS.md` is the Codex entrypoint.
+This branch was started by Claude Code and is now maintained through Codex.
+`CLAUDE.md` remains historical guidance, but this `AGENTS.md` is the Codex
+entrypoint.
 
 The active OpenSpec change is `port-firmware-esp32s31`:
 
 - Planning artifacts are under `openspec/changes/port-firmware-esp32s31/`.
 - `openspec status --change port-firmware-esp32s31 --json` should report
   `isComplete: true` for proposal, design, specs, and tasks.
-- `decision.md` captures the paused Claude decision about Group 6 audio.
+- `decision.md` records the resolved Group 6 audio decision: build an audio
+  scaffold now, defer live UAC/Opus runtime work to hardware bring-up.
 
 Implementation state from `openspec/changes/port-firmware-esp32s31/tasks.md`:
 
 - Groups 0-4 are marked complete.
 - Group 5 is complete except `disable_pico_led`, which is deferred to the battery
   indicator work.
-- Group 6 audio is intentionally paused pending a user decision about stubbing,
-  full vendoring/UAC work, or skipping to cleanup.
+- Group 6 audio is no longer blocked on a scope decision. Implement the
+  default-disabled audio scaffold from the current OpenSpec tasks; do not vendor
+  `xiph/opus` or WDL, do not inject TinyUSB UAC, and do not change the HID-only
+  USB descriptor in this pass.
+- Group 7 should use the OpenSpec default: a plain GPIO battery LED path with the
+  GPIO disabled until real board hardware identifies the pin. Do not ask for a
+  board LED decision during implementation.
 - Groups 7-8 remain pending.
 
-Do not continue Groups 6-8 or answer the audio decision during project init.
+Do not claim runtime BT/USB/audio success until the paths are tested on physical
+ESP32-S31 hardware.
 
 ## OpenSpec / Codex Workflow
 

@@ -13,5 +13,6 @@ idf_component_register(
         bthost          # Bluedroid BR/EDR HID host (group 3; bt.h)
         config          # NVS-backed Config (group 5 core; config.h)
         bridge          # BT <-> USB HID report relay (group 4; bridge.h)
-        # audio battery_led   # added as each is ported
+        audio           # default-disabled audio scaffold (group 6; audio.h)
+        battery_led     # plain GPIO low-battery indicator (group 7; battery_led.h)
 )

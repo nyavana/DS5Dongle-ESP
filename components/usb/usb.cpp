@@ -1,8 +1,7 @@
 //
 // USB device bring-up (ported from the Pico build's usb.cpp + main.cpp USB
-// glue). Replaces board_init / tusb_init with esp_tinyusb's
-// tinyusb_driver_install (which also creates the USB device task), fed the
-// ported DualSense descriptors.
+// glue). Uses esp_tinyusb's tinyusb_driver_install (which also creates the USB
+// device task), fed the ported DualSense descriptors.
 //
 // Group 2 scope: HID-only enumeration. The HID GET/SET-report callbacks route
 // here as stubs; groups 4-5 fill the command (0xf6-0xf9), output (0x02) and
