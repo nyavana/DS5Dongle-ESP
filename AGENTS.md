@@ -16,7 +16,7 @@ The Pico 2W reference implementation is in `../master` and mirrored in
 
 - Always prefix shell commands with `rtk`.
 - Use this worktree as the working directory for migration commands:
-  `rtk git status`, `rtk openspec status --change port-firmware-esp32s31 --json`.
+  `rtk git status`, `rtk openspec validate --all`.
 
 ## Toolchain And Build Gate
 
@@ -47,19 +47,19 @@ This branch was started by Claude Code and is now maintained through Codex.
 `CLAUDE.md` remains historical guidance, but this `AGENTS.md` is the Codex
 entrypoint.
 
-The active OpenSpec change is `port-firmware-esp32s31`:
+The OpenSpec change `port-firmware-esp32s31` is complete and archived:
 
-- Planning artifacts are under `openspec/changes/port-firmware-esp32s31/`.
-- `openspec status --change port-firmware-esp32s31 --json` should report
-  `isComplete: true` for proposal, design, specs, and tasks.
-- `openspec instructions apply --change port-firmware-esp32s31 --json` should
-  report `state: all_done`.
+- Archived planning artifacts are under
+  `openspec/changes/archive/2026-06-15-port-firmware-esp32s31/`.
+- Main specs are synced under `openspec/specs/`.
+- `openspec list --json` should show no active changes for this completed pass.
+- `openspec validate --all` should validate the seven synced main specs.
 - `decision.md` records the resolved Group 6 audio decision: build an audio
   scaffold now, defer live UAC/Opus runtime work to hardware bring-up.
 - `docs/COMPLETION.md` records the build-verified migration scaffold and the
   remaining hardware-only validation items.
 
-Implementation state from `openspec/changes/port-firmware-esp32s31/tasks.md`:
+Implementation state from the archived OpenSpec tasks:
 
 - Groups 0-8 are marked complete.
 - Group 6 audio is implemented as a default-disabled scaffold in
@@ -82,7 +82,8 @@ should not be deleted unless the user explicitly requests cleanup.
 Prefer these checks before resuming work:
 
 ```bash
-rtk openspec status --change port-firmware-esp32s31 --json
+rtk openspec list --json
+rtk openspec validate --all
 rtk git status --short --untracked-files=all
 rtk diff -qr .claude/skills .codex/skills
 ```
