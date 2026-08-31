@@ -17,4 +17,4 @@ runtime boundary. Keep `main/` thin and move logic into these components.
 | `battery_led` | ported | `battery_led.cpp` | plain GPIO path with disabled default pin, fresh-report timeout, disconnect clear, respecting `disable_pico_led` |
 
 Each component has its own `CMakeLists.txt` with `idf_component_register(...)`.
-See `docs/MIGRATION.md` and the active OpenSpec tasks for remaining work.
+See `docs/MIGRATION.md` and `docs/COMPLETION.md` for remaining work.

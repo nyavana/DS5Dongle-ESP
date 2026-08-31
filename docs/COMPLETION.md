@@ -2,11 +2,11 @@
 
 Date: 2026-06-15
 
-This report closes the autonomous ESP32-S31 migration pass for
-`port-firmware-esp32s31`. Verification here means a clean ESP-IDF build for the
-`esp32s31` preview target using the local `espidf:s31` toolchain. No physical
-ESP32-S31 hardware was available, so runtime BT, USB, audio, and LED behavior
-are not claimed as tested.
+This report closes the initial autonomous ESP32-S31 migration pass.
+Verification here means a clean ESP-IDF build for the `esp32s31` preview target
+using the local `espidf:s31` toolchain. No physical ESP32-S31 hardware was
+available, so runtime BT, USB, audio, and LED behavior are not claimed as
+tested.
 
 ## Build-Verified Scope
 

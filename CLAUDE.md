@@ -76,11 +76,10 @@ Module mapping (Pico → ESP-IDF):
 | `battery_led.cpp` | plain GPIO path with disabled default pin; `led_strip` only after hardware requires it |
 | `main.cpp` | `app_main` + FreeRTOS tasks |
 
-All OpenSpec implementation groups for `port-firmware-esp32s31` are complete,
-the main specs are synced, and the change is archived under
-`openspec/changes/archive/2026-06-15-port-firmware-esp32s31/`. Suggested next
-order: physical S31 hardware bring-up, then a new scoped change for any runtime
-audio or board-specific LED work.
+The initial migration scaffold is complete. `docs/COMPLETION.md` records the
+build-verified scope and `decision.md` records the default-disabled audio
+boundary. Suggested next order: physical S31 hardware bring-up, then a new
+scoped change for any runtime audio or board-specific LED work.
 
 ## Remaining hardware TODOs
 

@@ -1,6 +1,6 @@
 # Group 6 Audio Decision
 
-Status: decided for the current OpenSpec plan.
+Status: decided for the current migration plan.
 
 The old decision point was whether to vendor `xiph/opus`, vendor WDL, inject
 TinyUSB UAC support, or skip audio entirely. That is no longer the active plan.
