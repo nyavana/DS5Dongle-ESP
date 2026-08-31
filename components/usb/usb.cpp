@@ -11,6 +11,8 @@
 #include "usb.h"
 
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "tinyusb.h"
 #include "tusb.h"
 
@@ -44,6 +46,12 @@ void usb_init() {
     ESP_ERROR_CHECK(tinyusb_driver_install(&cfg));
     ESP_LOGI(TAG, "esp_tinyusb installed: DualSense HID device (VID %04x PID %04x)",
              usb_device_descriptor()->idVendor, usb_device_descriptor()->idProduct);
+}
+
+void usb_reconnect() {
+    tud_disconnect();
+    vTaskDelay(pdMS_TO_TICKS(150));
+    tud_connect();
 }
 
 // NOTE: the HID class callbacks (tud_hid_get_report_cb / tud_hid_set_report_cb)

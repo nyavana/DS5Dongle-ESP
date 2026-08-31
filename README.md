@@ -28,6 +28,8 @@ DS5Dongle-ESP/            (bare-repo worktree root — see ../LAYOUT.md)
     partitions.csv
     main/                 app_main entry (thin)
     components/           ported subsystems (usb / bthost / bridge / config / ...)
+    tools/                portable config tool and Wireshark post-dissector
+    tests/host/           dependency-free config/command contract tests
     legacy-pico/          original Pico sources, kept for side-by-side porting
     docs/MIGRATION.md     module-by-module port plan
     .devcontainer/        ESP-IDF Docker dev environment
@@ -79,6 +81,39 @@ GitHub Actions builds firmware inside
 `ghcr.io/nyavana/ds5dongle-esp32s31-idf:master`. Publish or refresh that image by
 running the `Build ESP-IDF S31 container` workflow. The firmware workflow cannot
 pull the container until that image exists in GHCR.
+
+## Configuration tool
+
+The firmware uses the canonical packed version-5 configuration contract: a
+22-byte HID body stored in a validated 32-byte NVS envelope. Incompatible or
+corrupt records fall back to complete version-5 defaults; valid zero values are
+preserved. The status-GPIO fields are stored and reported for compatibility but
+do not configure or drive a GPIO in this firmware slice.
+
+Install `hidapi` only for live device access, then use the portable tool from
+this worktree:
+
+```bash
+python3 -m pip install hidapi
+python3 tools/config_tool.py fields
+python3 tools/config_tool.py get
+python3 tools/config_tool.py set speaker_volume=90 inactive_time=0
+```
+
+The tool selects the Generic Desktop/Game Pad interface, preserves fields not
+named by `set`, verifies version 5 on read-back, and sends descriptor-sized
+64-byte feature reports. Its pack/unpack logic and the firmware's pure config
+and command contracts can be tested without HID bindings or hardware:
+
+```bash
+python3 -m unittest discover -s tests/host -p 'test_*.py'
+cmake -S tests/host -B /tmp/ds5-s31-host-tests
+cmake --build /tmp/ds5-s31-host-tests
+ctest --test-dir /tmp/ds5-s31-host-tests --output-on-failure
+```
+
+These checks do not validate physical NVS, USB reconnect, Bluetooth, wake,
+audio, or GPIO behavior.
 
 ## Pico Reference
 

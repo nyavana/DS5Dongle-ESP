@@ -9,8 +9,8 @@ runtime boundary. Keep `main/` thin and move logic into these components.
 | `bthost` | ported | `bt.cpp` | Bluedroid Classic (BR/EDR) HID host via `esp_hidh` |
 | `bridge` | ported | `main.cpp` interrupt/report loop | BT input to USB HID input, USB output to BT output |
 | `report_buffer` | ported | `main.cpp` globals | `portMUX`-guarded shared input-report buffer |
-| `config` | ported | `config.cpp` | NVS blob with validation and read-back verification |
-| `cmd` | ported | `cmd.cpp` | custom HID feature-report command protocol |
+| `config` | ported | `config.cpp` | canonical packed v5 body in an exact-size, CRC-checked NVS envelope with verified read-back |
+| `cmd` | ported | `cmd.cpp` | bounded `0xf6`-`0xf9` feature-report contract with side effects behind component seams |
 | `state_mgr` | ported | `state_mgr.cpp` | DualSense output-state packing |
 | `common` | ported | utility helpers | small shared helpers without legacy transport dependencies |
 | `audio` | scaffold ported | `audio.cpp` | default-disabled FreeRTOS queue/task, headset state, guarded speaker buffer, and `0x36` helper; UAC/Opus runtime deferred |

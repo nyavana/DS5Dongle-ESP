@@ -10,7 +10,8 @@ subsystems ported and wired:
 - BR/EDR HID host through Bluedroid `esp_hidh`;
 - BT input to USB HID input bridge;
 - USB output/feature reports to BT output reports;
-- NVS-backed config, custom command protocol, and output-state packing;
+- canonical version-5 NVS-backed config, bounded custom command protocol,
+  portable host tooling, and output-state packing;
 - default-disabled audio scaffold behind `audio.h`, including headset state,
   queue/task shape, guarded speaker payload state, counters, and `0x36` packet
   helper;
@@ -47,11 +48,35 @@ So the S31 is the first single-chip ESP target that fits this project.
 | `usb.cpp`, `usb_descriptors.cpp`, `tusb_config.h` | TinyUSB device posing as DualSense | ported as `components/usb` using `esp_tinyusb` and HID-only custom descriptors |
 | `bt.cpp`, `btstack_config.h` | BTstack BR/EDR HID host | ported as `components/bthost` using Bluedroid `esp_hidh` |
 | input/output bridge from `main.cpp` | BT `0x31` input to USB `0x01`, USB output to BT `0x31` | ported as `components/bridge` plus `components/report_buffer` |
-| `config.cpp` | config persisted to raw flash | ported as `components/config` using NVS |
-| `cmd.cpp` | custom HID feature-report commands | ported as `components/cmd` |
+| `config.cpp` | config persisted to raw flash | ported as a packed version-5 contract in `components/config` using NVS only |
+| `cmd.cpp` | custom HID feature-report commands | ported as bounded `0xf6`-`0xf9` helpers in `components/cmd`; USB reconnect stays inside `components/usb` |
 | `state_mgr.cpp` | DualSense output-state packing | ported as `components/state_mgr` |
 | `audio.cpp` | UAC input, haptics resample, Opus speaker packets | scaffold ported as `components/audio`; runtime UAC/Opus deferred to hardware bring-up |
 | `battery_led.cpp` | low-battery LED blink | ported as `components/battery_led`; GPIO disabled by default until board pin is known |
+
+## Version-5 config and host contract
+
+The S31 port now uses the canonical packed 22-byte `Config_body` and a packed
+32-byte NVS envelope containing magic, CRC, body size, and body. Load accepts
+only exact-size version-5 records with valid magic, size, and CRC. A matching
+record is normalized field by field; incompatible version-1 or corrupt data is
+reset to complete version-5 defaults rather than reinterpreted. Save writes and
+commits the envelope, reads it back at the exact size, validates it again, and
+compares the body before reporting success.
+
+The two status-GPIO bytes are present for wire/storage compatibility. The pin
+is normalized against the ESP32-S31 output-capable SoC predicate, but this task
+does not select a board pin or configure/drive GPIO output.
+
+`tools/config_tool.py` is the portable version-5 HID client. It loads `hidapi`
+only for live access, filters for the gamepad interface, supports report bodies
+with or without a report-ID prefix, preserves unspecified values, and writes
+exactly 64 bytes per SET feature report. `tools/wireshark_dualsense_setstate.lua`
+decodes the 47-byte SetState payload without depending on the Pico build.
+
+The cross-language contract is covered without hardware by Python `unittest`
+plus CMake/CTest targets under `tests/host/`. Physical NVS, USB reconnect,
+Bluetooth, wake, audio, and GPIO behavior remains part of hardware bring-up.
 
 ## `main.cpp` hardware calls to ESP-IDF
 
@@ -111,6 +136,9 @@ officially lists `esp32s31` once that is available.
 - **Battery LED hardware pin**: the component is ported, but
   `DS5_BATTERY_LED_GPIO` defaults to `-1`. Set the real GPIO or switch to
   `led_strip` later only if the chosen board requires it.
+- **Status GPIO behavior**: version 5 stores and reports the canonical
+  `status_gpio_pin` and `status_gpio_mode` fields, but output remains inert until
+  an actual board and board-safe allowlist are selected.
 - **CI**: the workflows now build ESP32-S31 `.bin` artifacts using the published
   GHCR toolchain image `ghcr.io/nyavana/ds5dongle-esp32s31-idf:master`. Run
   `Build ESP-IDF S31 container` once before relying on normal firmware CI; until

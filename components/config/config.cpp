@@ -1,167 +1,215 @@
 //
-// Device configuration (ported from legacy-pico/src/config.cpp).
-//
-// The reference build stored Config in a raw flash sector. Here it persists as
-// a single NVS blob (namespace "ds5", key "config"), keeping the same
-// magic/version/size/CRC validation as a belt-and-braces check over NVS's own
-// integrity. The disable_pico_led field is routed to the battery indicator.
+// NVS adapter for the canonical version-5 configuration contract.
 //
 
 #include "config.h"
 
-#include <cmath>
 #include <cstring>
 
+#include "driver/gpio.h"
+#include "esp_err.h"
 #include "esp_log.h"
 #include "nvs.h"
-#include "nvs_flash.h"
 
-#include "utils.h"
+namespace {
 
-static const char *TAG = "config";
+constexpr char CONFIG_NVS_NS[] = "ds5";
+constexpr char CONFIG_NVS_KEY[] = "config";
 
-constexpr uint32_t CONFIG_MAGIC = 0x66ccff00;
-constexpr uint16_t CONFIG_VERSION = 1;
-#define CONFIG_NVS_NS  "ds5"
-#define CONFIG_NVS_KEY "config"
+const char *TAG = "config";
+Config_body current_body = config_default_body();
 
-static Config config{};
+bool runtime_status_pin_is_valid(const uint8_t pin) {
+    return GPIO_IS_VALID_OUTPUT_GPIO(static_cast<gpio_num_t>(pin));
+}
+
+const char *record_status_name(const ConfigRecordStatus status) {
+    switch (status) {
+        case ConfigRecordStatus::valid:
+            return "valid";
+        case ConfigRecordStatus::invalid_length:
+            return "invalid length";
+        case ConfigRecordStatus::invalid_magic:
+            return "invalid magic";
+        case ConfigRecordStatus::invalid_size:
+            return "invalid body size";
+        case ConfigRecordStatus::incompatible_version:
+            return "incompatible schema version";
+        case ConfigRecordStatus::invalid_crc:
+            return "invalid CRC";
+    }
+    return "unknown";
+}
+
+bool read_exact_record(const nvs_handle_t handle, Config &record, esp_err_t &error) {
+    size_t stored_size = 0;
+    error = nvs_get_blob(handle, CONFIG_NVS_KEY, nullptr, &stored_size);
+    if (error != ESP_OK || stored_size != CONFIG_RECORD_SIZE) {
+        return false;
+    }
+
+    size_t read_size = sizeof(record);
+    error = nvs_get_blob(handle, CONFIG_NVS_KEY, &record, &read_size);
+    return error == ESP_OK && read_size == CONFIG_RECORD_SIZE;
+}
+
+}  // namespace
+
 bool is_dse = false;
 
-// Filled by components/battery_led in group 7. Kept weak to avoid a config ->
-// battery_led component dependency while still applying disable_pico_led changes
-// immediately when the indicator is linked.
-__attribute__((weak)) void battery_led_apply_config(void) {}
-
-static uint32_t calc_config_crc(const Config &con) {
-    return crc32(reinterpret_cast<const uint8_t *>(&con.body), sizeof(Config_body));
+void config_default() {
+    current_body = config_default_body();
 }
 
 void config_valid() {
-    // Validate the header + every field, substituting the documented default
-    // for anything out of range.
-    if (config.magic != CONFIG_MAGIC) {
-        config.magic = CONFIG_MAGIC;
-        ESP_LOGW(TAG, "Config magic header invalid");
-    }
-    if (config.version != CONFIG_VERSION) {
-        config.version = CONFIG_VERSION;
-        ESP_LOGW(TAG, "Config version invalid");
-    }
-    if (config.size != sizeof(Config_body)) {
-        config.size = sizeof(Config_body);
-        ESP_LOGW(TAG, "Config body size invalid");
-    }
-    auto body = &config.body;
-    if (std::isnan(body->haptics_gain) || body->haptics_gain < 1.0f || body->haptics_gain > 2.0f) {
-        body->haptics_gain = 1.0f;
-        ESP_LOGW(TAG, "Haptics gain invalid");
-    }
-    if (std::isnan(body->speaker_volume) || body->speaker_volume < -100 || body->speaker_volume > 0) {
-        body->speaker_volume = -100;
-        ESP_LOGW(TAG, "Speaker volume invalid");
-    }
-    if (body->inactive_time < 5 || body->inactive_time > 60) {
-        body->inactive_time = 30;
-        ESP_LOGW(TAG, "Inactive time invalid");
-    }
-    if (body->disable_inactive_disconnect > 1) {
-        body->disable_inactive_disconnect = 0;
-        ESP_LOGW(TAG, "disable_inactive_disconnect invalid");
-    }
-    if (body->disable_pico_led > 1) {
-        body->disable_pico_led = 0;
-        ESP_LOGW(TAG, "disable_pico_led invalid");
-    }
-    if (body->polling_rate_mode > 2) {
-        body->polling_rate_mode = 0;
-        ESP_LOGW(TAG, "polling_rate_mode invalid");
-    }
-    if (body->audio_buffer_length < 16 || body->audio_buffer_length > 128) {
-        body->audio_buffer_length = 64;
-        ESP_LOGW(TAG, "audio_buffer_length invalid");
-    }
-    if (body->controller_mode > 2) {
-        body->controller_mode = 2;
-        ESP_LOGW(TAG, "controller_mode invalid");
-    }
-    if (body->config_version != CONFIG_VERSION) {
-        body->config_version = CONFIG_VERSION;
-        ESP_LOGW(TAG, "Config may be a breaking change");
-    }
-}
-
-void config_default() {
-    memset(&config, 0, sizeof(config));
-    config_valid(); // fills magic/version/size + all field defaults
+    current_body = config_normalize_body(current_body, runtime_status_pin_is_valid);
 }
 
 void config_load() {
-    bool loaded = false;
-    nvs_handle_t h;
-    if (nvs_open(CONFIG_NVS_NS, NVS_READONLY, &h) == ESP_OK) {
-        Config tmp{};
-        size_t sz = sizeof(tmp);
-        if (nvs_get_blob(h, CONFIG_NVS_KEY, &tmp, &sz) == ESP_OK && sz == sizeof(Config)) {
-            config = tmp;
-            loaded = true;
+    nvs_handle_t handle;
+    esp_err_t error = nvs_open(CONFIG_NVS_NS, NVS_READONLY, &handle);
+    if (error != ESP_OK) {
+        config_default();
+        if (error == ESP_ERR_NVS_NOT_FOUND) {
+            ESP_LOGW(TAG, "Config is missing from NVS; using version-5 defaults");
+        } else {
+            ESP_LOGW(TAG, "Unable to open config NVS (%s); using version-5 defaults",
+                     esp_err_to_name(error));
         }
-        nvs_close(h);
+        return;
     }
-    if (!loaded) {
-        ESP_LOGW(TAG, "No valid config in NVS, using defaults");
-        memset(&config, 0, sizeof(config));
+
+    Config stored{};
+    size_t stored_size = 0;
+    error = nvs_get_blob(handle, CONFIG_NVS_KEY, nullptr, &stored_size);
+    if (error == ESP_ERR_NVS_NOT_FOUND) {
+        nvs_close(handle);
+        config_default();
+        ESP_LOGW(TAG, "Config is missing from NVS; using version-5 defaults");
+        return;
     }
-    config_valid();
+    if (error != ESP_OK) {
+        nvs_close(handle);
+        config_default();
+        ESP_LOGW(TAG, "Config NVS size read failed (%s); using version-5 defaults",
+                 esp_err_to_name(error));
+        return;
+    }
+    if (stored_size != CONFIG_RECORD_SIZE) {
+        nvs_close(handle);
+        config_default();
+        ESP_LOGW(TAG, "Incompatible config record length %u; using version-5 defaults",
+                 static_cast<unsigned>(stored_size));
+        return;
+    }
+
+    size_t read_size = sizeof(stored);
+    error = nvs_get_blob(handle, CONFIG_NVS_KEY, &stored, &read_size);
+    nvs_close(handle);
+    if (error != ESP_OK || read_size != CONFIG_RECORD_SIZE) {
+        config_default();
+        if (error != ESP_OK) {
+            ESP_LOGW(TAG, "Config NVS read failed (%s); using version-5 defaults",
+                     esp_err_to_name(error));
+        } else {
+            ESP_LOGW(TAG, "Config NVS read length changed; using version-5 defaults");
+        }
+        return;
+    }
+
+    Config_body decoded{};
+    const ConfigRecordStatus status =
+        config_decode_record(&stored, sizeof(stored), decoded, runtime_status_pin_is_valid);
+    if (status != ConfigRecordStatus::valid) {
+        config_default();
+        ESP_LOGW(TAG, "Rejected %s config record; using version-5 defaults",
+                 record_status_name(status));
+        return;
+    }
+
+    current_body = decoded;
+    if (std::memcmp(&stored.body, &decoded, sizeof(decoded)) != 0) {
+        ESP_LOGW(TAG, "Loaded config contained invalid fields; canonical defaults applied");
+    } else {
+        ESP_LOGI(TAG, "Loaded verified version-5 config from NVS");
+    }
 }
 
 bool config_save() {
-    config.crc32 = calc_config_crc(config);
+    current_body = config_normalize_body(current_body, runtime_status_pin_is_valid);
+    const Config record = config_make_record(current_body, runtime_status_pin_is_valid);
 
-    nvs_handle_t h;
-    esp_err_t err = nvs_open(CONFIG_NVS_NS, NVS_READWRITE, &h);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "nvs_open failed: %s", esp_err_to_name(err));
-        return false;
-    }
-    err = nvs_set_blob(h, CONFIG_NVS_KEY, &config, sizeof(Config));
-    if (err == ESP_OK) {
-        err = nvs_commit(h);
-    }
-    nvs_close(h);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Config NVS write failed: %s", esp_err_to_name(err));
+    nvs_handle_t handle;
+    esp_err_t error = nvs_open(CONFIG_NVS_NS, NVS_READWRITE, &handle);
+    if (error != ESP_OK) {
+        ESP_LOGE(TAG, "Config NVS open for write failed: %s", esp_err_to_name(error));
         return false;
     }
 
-    // Read back and verify the persisted record (replaces the Pico flash verify).
-    Config verify{};
-    if (nvs_open(CONFIG_NVS_NS, NVS_READONLY, &h) == ESP_OK) {
-        size_t sz = sizeof(verify);
-        esp_err_t rb = nvs_get_blob(h, CONFIG_NVS_KEY, &verify, &sz);
-        nvs_close(h);
-        if (rb == ESP_OK && sz == sizeof(verify) && calc_config_crc(verify) == config.crc32) {
-            ESP_LOGI(TAG, "Config saved + verified");
-            return true;
+    error = nvs_set_blob(handle, CONFIG_NVS_KEY, &record, sizeof(record));
+    if (error != ESP_OK) {
+        nvs_close(handle);
+        ESP_LOGE(TAG, "Config NVS write failed: %s", esp_err_to_name(error));
+        return false;
+    }
+
+    error = nvs_commit(handle);
+    nvs_close(handle);
+    if (error != ESP_OK) {
+        ESP_LOGE(TAG, "Config NVS commit failed: %s", esp_err_to_name(error));
+        return false;
+    }
+
+    error = nvs_open(CONFIG_NVS_NS, NVS_READONLY, &handle);
+    if (error != ESP_OK) {
+        ESP_LOGE(TAG, "Config NVS verification open failed: %s", esp_err_to_name(error));
+        return false;
+    }
+
+    Config verified{};
+    if (!read_exact_record(handle, verified, error)) {
+        nvs_close(handle);
+        if (error == ESP_OK) {
+            ESP_LOGE(TAG, "Config NVS verification length mismatch");
+        } else {
+            ESP_LOGE(TAG, "Config NVS verification read failed: %s", esp_err_to_name(error));
         }
+        return false;
     }
-    ESP_LOGW(TAG, "Config save verify failed");
-    return false;
+    nvs_close(handle);
+
+    Config_body decoded{};
+    const ConfigRecordStatus status =
+        config_decode_record(&verified, sizeof(verified), decoded, runtime_status_pin_is_valid);
+    if (status != ConfigRecordStatus::valid) {
+        ESP_LOGE(TAG, "Config NVS verification rejected %s record", record_status_name(status));
+        return false;
+    }
+    if (std::memcmp(&verified, &record, sizeof(record)) != 0 ||
+        std::memcmp(&decoded, &current_body, sizeof(decoded)) != 0) {
+        ESP_LOGE(TAG, "Config NVS verification body mismatch");
+        return false;
+    }
+
+    ESP_LOGI(TAG, "Config saved to NVS and verified");
+    return true;
 }
 
 const Config_body &get_config() {
-    return config.body;
+    return current_body;
 }
 
-void set_config(const uint8_t *new_config, const uint16_t len) {
-    const auto copy_len = len < sizeof(Config_body) ? len : sizeof(Config_body);
-    memcpy(&config.body, new_config, copy_len);
-    config_valid();
-    battery_led_apply_config();
+bool set_config(const uint8_t *new_config, const size_t len) {
+    if (new_config == nullptr || len < sizeof(Config_body)) {
+        return false;
+    }
+
+    Config_body replacement{};
+    std::memcpy(&replacement, new_config, sizeof(replacement));
+    current_body = config_normalize_body(replacement, runtime_status_pin_is_valid);
+    return true;
 }
 
 void set_config(const Config_body &new_config) {
-    config.body = new_config;
-    config_valid();
-    battery_led_apply_config();
+    current_body = config_normalize_body(new_config, runtime_status_pin_is_valid);
 }

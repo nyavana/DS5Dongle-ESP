@@ -14,4 +14,8 @@ extern float volume[2]; // 0: SPEAKER(0x02) 1: MIC(0x05)
 // and start the USB device task.
 void usb_init();
 
+// Request USB re-enumeration. TinyUSB calls and reconnect timing remain owned
+// by this component so command handling has no direct USB-stack dependency.
+void usb_reconnect();
+
 #endif //DS5_BRIDGE_USB_H

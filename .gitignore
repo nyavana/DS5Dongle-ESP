@@ -14,6 +14,7 @@ dependencies.lock
 .claude/
 *.swp
 compile_commands.json
+__pycache__/
 
 # --- OS ---
 .DS_Store

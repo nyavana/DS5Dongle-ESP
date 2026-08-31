@@ -165,6 +165,8 @@ struct __attribute__((packed)) SetStateData { // 47
     uint8_t LedBlue;
 };
 
+static_assert(sizeof(SetStateData) == 47, "DualSense SetStateData contract changed");
+
 inline void print_hex(const uint8_t *data, size_t size) {
     for (size_t i = 0; i < size; i++) {
         printf("%02x ", data[i]);

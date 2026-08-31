@@ -2,11 +2,13 @@
 
 Date: 2026-06-15
 
+Config/host-contract refresh: 2026-08-30
+
 This report closes the initial autonomous ESP32-S31 migration pass.
 Verification here means a clean ESP-IDF build for the `esp32s31` preview target
 using the local `espidf:s31` toolchain. No physical ESP32-S31 hardware was
-available, so runtime BT, USB, audio, and LED behavior are not claimed as
-tested.
+available, so runtime NVS/config, Bluetooth, USB, wake, audio, battery-LED, and
+status-GPIO behavior are not claimed as tested.
 
 ## Build-Verified Scope
 
@@ -19,8 +21,12 @@ tested.
   and feature-report cache.
 - Report bridge: BT `0x31` input to USB `0x01`, USB output `0x02` to BT `0x31`,
   polling-rate modes, state packing, command routing, and headset/battery hooks.
-- Device config: NVS-backed config blob with validation, read-back save verify,
-  and `0xf6`-`0xf9` feature-report commands.
+- Device config: canonical packed 22-byte version-5 body in an exact-size
+  32-byte NVS envelope with magic/size/version/CRC validation, normalization,
+  and verified save read-back.
+- Host contract: bounded `0xf6`-`0xf9` feature-report handling, USB reconnect
+  behind the USB component, a portable lazy-`hidapi` config tool, a SetState
+  Wireshark post-dissector, and dependency-free Python/C++ contract tests.
 - Audio scaffold: `components/audio` behind `audio.h`, default-disabled runtime,
   FreeRTOS queue/task shape, headset state, guarded speaker payload, counters,
   and `0x36` packet helper.
@@ -41,6 +47,8 @@ tested.
   `espressif/esp_audio_codec^2.5.0`.
 - Battery LED: plain ESP-IDF GPIO, disabled by default until the board LED pin is
   known. Do not add `led_strip` unless the selected board requires it.
+- Status GPIO: retain the version-5 pin/mode bytes for host and NVS compatibility
+  but do not configure or drive them until a real board and safe pin are known.
 
 ## Hardware Bring-Up Deferrals
 
@@ -55,5 +63,7 @@ tested.
   `esp_audio_codec` Opus encode, and test `0x36` Bluetooth audio timing.
 - Set the actual `DS5_BATTERY_LED_GPIO` and test low-battery blink, staleness
   timeout, disconnect clear, and `disable_pico_led` behavior.
+- Select a board-safe status GPIO before enabling or testing the version-5
+  status-pin output behavior; the current contract stores it but leaves it inert.
 - Re-run config command, USB reconnect, and inactivity-disconnect workflows
   against hardware before claiming runtime success.
